@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { useRouter } from "next/navigation"
 import {
   User,
   Briefcase,
@@ -30,18 +31,36 @@ import {
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState("basic")
 
+  const router = useRouter()
+  const goTOEdition = () => {
+    router.replace("../edit")
+  }
+
+  const goTOList = () => {
+    router.replace("../")
+  }
+
   return (
     <div className="container mx-auto px-4 max-w-5xl">
       <Card className="shadow-lg border-none">
         <CardContent className="p-0">
           <div className="relative">
             <div className="h-48 bg-gradient-to-r from-rose-400 via-fuchsia-500 to-indigo-500 rounded-t-lg"></div>
-            <div className="absolute -bottom-16 left-8">
+            <div className="absolute -bottom-16 flex justify-between items-center w-full max-w-5xl pl-10">
               <Avatar className="h-32 w-32 border-4 border-white shadow-md">
                 <AvatarImage src="/placeholder.svg?height=128&width=128" alt="プロフィール写真" />
                 <AvatarFallback>JP</AvatarFallback>
               </Avatar>
+              <div className="flex gap-2 mr-10 md:gap-10">
+                <div className="text-sm text-right pt-20 px-0 m-0 md:text-base">
+                  <button className = "bg-gray-500 text-white rounded-full py-1.5 px-6 outline-none" onClick = {goTOEdition}>編集する</button>
+                </div>
+                <div className="text-sm text-right pt-20 px-0 m-0 md:text-base">
+                  <button className = "bg-gray-500 text-white rounded-full py-1.5 px-6 outline-none" onClick = {goTOList}>一覧に戻る</button>
+                </div>
+              </div>
             </div>
+
           </div>
 
           <div className="pt-20 px-8 pb-8">
@@ -200,18 +219,6 @@ export default function ProfilePage() {
                   </h2>
                   <div className="flex flex-wrap gap-2 mb-6">
                     <Badge className="bg-blue-500">JavaScript</Badge>
-                    <Badge className="bg-blue-500">TypeScript</Badge>
-                    <Badge className="bg-blue-500">React</Badge>
-                    <Badge className="bg-blue-500">Next.js</Badge>
-                    <Badge className="bg-blue-500">Node.js</Badge>
-                    <Badge className="bg-blue-500">Express</Badge>
-                    <Badge className="bg-blue-500">MongoDB</Badge>
-                    <Badge className="bg-blue-500">PostgreSQL</Badge>
-                    <Badge className="bg-blue-500">GraphQL</Badge>
-                    <Badge className="bg-blue-500">Docker</Badge>
-                    <Badge className="bg-blue-500">AWS</Badge>
-                    <Badge className="bg-blue-500">Git</Badge>
-                    <Badge className="bg-blue-500">CI/CD</Badge>
                   </div>
                 </div>
 

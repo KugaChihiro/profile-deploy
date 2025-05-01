@@ -1,8 +1,7 @@
-"use client"
-
 import { useState } from "react"
 import Image from "next/image"
 import { Trash2, Plus, Edit } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 // Define employee type
 interface Employee {
@@ -46,6 +45,12 @@ export default function EmployeeDirectory() {
       selected: false,
     }
     setEmployees([...employees, newEmployee])
+  }
+
+  const router = useRouter()
+
+  const goToDetail = () => {
+    router.replace("../view")
   }
 
   return (
@@ -92,8 +97,8 @@ export default function EmployeeDirectory() {
                 <h3 className="font-semibold text-lg mb-1">{employee.name}</h3>
                 <p className="text-gray-600">{employee.role}</p>
 
-                {/* Edit Button */}
-                <button className="mt-4 w-full py-2 px-4 border border-gray-300 rounded-md flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors">
+                {/* Show Button */}
+                <button className="mt-4 w-full py-2 px-4 border border-gray-300 rounded-md flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors" onClick={goToDetail}>
                   <Edit size={16} />
                   <span>詳細を見る</span>
                 </button>
