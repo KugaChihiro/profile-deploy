@@ -5,27 +5,26 @@ import { useRouter } from "next/navigation"
 
 // Define employee type
 interface Employee {
-  id: string
+  id:number
   name: string
-  role: string
   photoUrl: string
   selected: boolean
 }
 
-export default function EmployeeDirectory() {
+
+const EmployeeDirectory = () => {
   // Sample employee data
   const [employees, setEmployees] = useState<Employee[]>([
     {
-      id: "001",
+      id: 1,
       name: "新規 社員",
-      role: "不明",
       photoUrl: "/placeholder.svg?height=200&width=200",
       selected: false,
     },
   ])
 
   // Toggle employee selection
-  const toggleSelect = (id: string) => {
+  const toggleSelect = (id: number) => {
     setEmployees(employees.map((emp) => (emp.id === id ? { ...emp, selected: !emp.selected } : emp)))
   }
 
@@ -36,7 +35,7 @@ export default function EmployeeDirectory() {
 
   // Add new employee (placeholder function)
   const addEmployee = () => {
-    const newId = `${String(employees.length + 1).padStart(3, "0")}`
+    const newId = employees.length > 0 ? Math.max(...employees.map(emp => emp.id)) + 1 : 1;
     const newEmployee: Employee = {
       id: newId,
       name: "新規 社員",
@@ -49,9 +48,9 @@ export default function EmployeeDirectory() {
 
   const router = useRouter()
 
-  const goToDetail = () => {
-    router.replace("../view")
-  }
+  const goToDetail = (id: string) => {
+    router.push(`/${id}`);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -95,10 +94,9 @@ export default function EmployeeDirectory() {
               <div className="p-4">
                 <p className="text-sm text-gray-500 mb-1">{employee.id}</p>
                 <h3 className="font-semibold text-lg mb-1">{employee.name}</h3>
-                <p className="text-gray-600">{employee.role}</p>
 
                 {/* Show Button */}
-                <button className="mt-4 w-full py-2 px-4 border border-gray-300 rounded-md flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors" onClick={goToDetail}>
+                <button className="mt-4 w-full py-2 px-4 border border-gray-300 rounded-md flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors" onClick={() => goToDetail(employee.id)}>
                   <Edit size={16} />
                   <span>詳細を見る</span>
                 </button>
@@ -133,4 +131,5 @@ export default function EmployeeDirectory() {
       )}
     </div>
   )
-}
+};
+export default EmployeeDirectory;

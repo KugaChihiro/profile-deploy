@@ -1,11 +1,13 @@
 "use client"
 
-import { useState } from "react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { useRouter } from "next/navigation"
+import { useState, useEffect, FC} from "react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { useRouter } from "next/navigation";
+import { api } from "@/lib/api";
+import { EmployeeOut } from "@/types/employee";
 import {
   User,
   Briefcase,
@@ -28,17 +30,31 @@ import {
   Tv,
 } from "lucide-react"
 
-export default function ProfilePage() {
-  const [activeTab, setActiveTab] = useState("basic")
+type Props = {
+  id: number;
+};
 
+
+const ProfilePage: FC<Props> = ({ id }) => {
+  const [activeTab, setActiveTab] = useState("basic")
+  const [employees, setEmployees] = useState<EmployeeOut | null>(null);
   const router = useRouter()
-  const goTOEdition = () => {
-    router.replace("../edit")
+
+  const goTOEdition = (id: number) => {
+    router.push(`/${id}/edit`);
   }
 
   const goTOList = () => {
-    router.replace("../")
+    router.push("../")
   }
+
+  useEffect(() => {
+    api.get(`/employees/${id}`)
+      .then((res) => {
+        setEmployees(res.data);
+      })
+      .catch((err) => console.error(err));
+  }, []);
 
   return (
     <div className="container mx-auto px-4 max-w-5xl">
@@ -48,19 +64,25 @@ export default function ProfilePage() {
             <div className="h-48 bg-gradient-to-r from-rose-400 via-fuchsia-500 to-indigo-500 rounded-t-lg"></div>
             <div className="absolute -bottom-16 flex justify-between items-center w-full max-w-5xl pl-10">
               <Avatar className="h-32 w-32 border-4 border-white shadow-md">
-                <AvatarImage src="/placeholder.svg?height=128&width=128" alt="プロフィール写真" />
+                {employees && (<AvatarImage src={employees.photo_url ?? "/placeholder.svg"} alt="プロフィール写真" />)}
                 <AvatarFallback>JP</AvatarFallback>
               </Avatar>
               <div className="flex gap-2 mr-10 md:gap-10">
                 <div className="text-sm text-right pt-20 px-0 m-0 md:text-base">
-                  <button className = "bg-gray-500 text-white rounded-full py-1.5 px-6 outline-none" onClick = {goTOEdition}>編集する</button>
+                  {employees && (
+                    <button
+                      className="bg-gray-500 text-white rounded-full py-1.5 px-6 outline-none"
+                      onClick={() => goTOEdition(employees.employee_id)}
+                    >
+                      編集する
+                    </button>
+                  )}
                 </div>
                 <div className="text-sm text-right pt-20 px-0 m-0 md:text-base">
                   <button className = "bg-gray-500 text-white rounded-full py-1.5 px-6 outline-none" onClick = {goTOList}>一覧に戻る</button>
                 </div>
               </div>
             </div>
-
           </div>
 
           <div className="pt-20 px-8 pb-8">
@@ -93,7 +115,7 @@ export default function ProfilePage() {
                         <User className="h-5 w-5 text-slate-500 mt-0.5" />
                         <div>
                           <p className="text-sm text-slate-500">氏名</p>
-                          <p className="font-medium">山田 太郎</p>
+                          {employees && (<p className="font-medium">{employees.name}</p>)}
                         </div>
                       </div>
 
@@ -101,7 +123,7 @@ export default function ProfilePage() {
                         <User className="h-5 w-5 text-slate-500 mt-0.5" />
                         <div>
                           <p className="text-sm text-slate-500">フリガナ</p>
-                          <p className="font-medium">ヤマダ タロウ</p>
+                          {employees && (<p className="font-medium">{employees.kana}</p>)}
                         </div>
                       </div>
 
@@ -109,7 +131,7 @@ export default function ProfilePage() {
                         <Calendar className="h-5 w-5 text-slate-500 mt-0.5" />
                         <div>
                           <p className="text-sm text-slate-500">生年月日</p>
-                          <p className="font-medium">1990年1月1日</p>
+                          {employees && (<p className="font-medium">{employees.birthdate}</p>)}
                         </div>
                       </div>
 
@@ -117,7 +139,7 @@ export default function ProfilePage() {
                         <MapPin className="h-5 w-5 text-slate-500 mt-0.5" />
                         <div>
                           <p className="text-sm text-slate-500">出身地</p>
-                          <p className="font-medium">東京都</p>
+                          {employees && (<p className="font-medium">{employees.hometown}</p>)}
                         </div>
                       </div>
                     </div>
@@ -126,41 +148,58 @@ export default function ProfilePage() {
                   <div>
                     <h2 className="text-2xl font-bold mb-4">学歴</h2>
                     <div className="space-y-4">
+                      {/* 小学校 */}
                       <div className="flex items-start gap-3">
                         <GraduationCap className="h-5 w-5 text-slate-500 mt-0.5" />
                         <div>
                           <p className="text-sm text-slate-500">小学校</p>
-                          <p className="font-medium">東京都立 桜小学校</p>
-                          <p className="text-sm text-slate-500">2002年4月 - 2008年3月</p>
+                          {employees && <p className="font-medium">{employees.elementary_school}</p>}
                         </div>
                       </div>
 
+                      {/* 中学校 */}
                       <div className="flex items-start gap-3">
                         <GraduationCap className="h-5 w-5 text-slate-500 mt-0.5" />
                         <div>
                           <p className="text-sm text-slate-500">中学校</p>
-                          <p className="font-medium">東京都立 桜中学校</p>
-                          <p className="text-sm text-slate-500">2008年4月 - 2011年3月</p>
+                          {employees && <p className="font-medium">{employees.junior_high_school}</p>}
                         </div>
                       </div>
 
+                      {/* 高等学校 */}
                       <div className="flex items-start gap-3">
                         <GraduationCap className="h-5 w-5 text-slate-500 mt-0.5" />
                         <div>
                           <p className="text-sm text-slate-500">高等学校</p>
-                          <p className="font-medium">東京都立 桜高等学校</p>
-                          <p className="text-sm text-slate-500">2011年4月 - 2014年3月</p>
+                          {employees && <p className="font-medium">{employees.high_school}</p>}
                         </div>
                       </div>
 
+                      {/* 大学 */}
                       <div className="flex items-start gap-3">
                         <GraduationCap className="h-5 w-5 text-slate-500 mt-0.5" />
                         <div>
                           <p className="text-sm text-slate-500">大学</p>
-                          <p className="font-medium">東京大学 工学部 情報工学科</p>
-                          <p className="text-sm text-slate-500">2014年4月 - 2018年3月</p>
+                          {employees && (
+                            <p className="font-medium">
+                              {employees.university} {employees.faculty}
+                            </p>
+                          )}
                         </div>
                       </div>
+
+                      {/* 大学院 */}
+                      {employees && employees.graduate_school && (
+                        <div className="flex items-start gap-3">
+                          <GraduationCap className="h-5 w-5 text-slate-500 mt-0.5" />
+                          <div>
+                            <p className="text-sm text-slate-500">大学院</p>
+                            <p className="font-medium">
+                              {employees.graduate_school} {employees.major}
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -530,4 +569,5 @@ export default function ProfilePage() {
       </Card>
     </div>
   )
-}
+};
+export default ProfilePage;

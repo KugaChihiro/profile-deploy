@@ -1,10 +1,10 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, FC} from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { format } from "date-fns"
+import { format,parseISO } from "date-fns"
 import { ja } from "date-fns/locale"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
@@ -18,6 +18,8 @@ import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { useRouter } from "next/navigation"
+import { api } from "@/lib/api"
+import { EmployeeOut,EmployeeUpdate } from "@/types/employee";
 import {
   User,
   Briefcase,
@@ -35,22 +37,22 @@ import {
 // フォームのスキーマ定義
 const formSchema = z.object({
   // 基本情報
-  profileImage: z.string().optional(),
-  name: z.string().min(1, { message: "名前を入力してください" }),
-  nameKana: z.string().min(1, { message: "フリガナを入力してください" }),
-  birthDate: z.date({ required_error: "生年月日を選択してください" }),
-  birthPlace: z.string().min(1, { message: "出身地を入力してください" }),
+  employee_id:z.number().optional().nullable(),
+  name: z.string().optional().nullable(),
+  kana: z.string().optional().nullable(),
+  birthdate: z.date().optional().nullable(),
+  hometown: z.string().optional().nullable(),
+  photo_url: z.string().optional().nullable(),
 
   // 学歴
-  education: z
-    .array(
-      z.object({
-        type: z.string(),
-        schoolName: z.string(),
-        period: z.string(),
-      }),
-    )
-    .default([]),
+  elementary_school: z.string().optional().nullable(),
+  junior_high_school: z.string().optional().nullable(),
+  high_school: z.string().optional().nullable(),
+  university: z.string().optional().nullable(),
+  faculty: z.string().optional().nullable(),
+  graduate_school: z.string().optional().nullable(),
+  major: z.string().optional().nullable(),
+
 
   // 職歴
   workHistory: z
@@ -113,42 +115,61 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>
 
-export default function ProfileForm() {
+type Props = {
+  id: number;
+};
+
+const ProfileForm: FC<Props> = ({ id }) => {
   const [activeTab, setActiveTab] = useState("basic")
   const [newSkill, setNewSkill] = useState("")
   const [newTechnology, setNewTechnology] = useState("")
   const [currentProjectIndex, setCurrentProjectIndex] = useState(0)
+  const [employees, setEmployees] = useState<EmployeeOut | null>(null)
+
 
   // フォームの初期化
+  const saved = typeof window !== "undefined" ? localStorage.getItem("profile-form") : null;
+  const values: FormValues = saved
+    ? JSON.parse(saved)
+    : {
+        // 基本情報
+        employee_id: undefined,
+        name: "",
+        kana: "",
+        birthdate: undefined,
+        hometown: "",
+        // 学歴
+        elementary_school: "",
+        junior_high_school: "",
+        high_school: "",
+        university: "",
+        faculty: "",
+        graduate_school: "",
+        major: "",
+        photo_url: "",
+        // 職歴
+        workHistory: [],
+        skills: [],
+        knowledge: [],
+        projects: [],
+        familyStructure: "",
+        parentsOccupation: "",
+        lessons: "",
+        clubs: "",
+        partTimeJobs: "",
+        circles: "",
+        hobbies: "",
+        favoriteFoods: "",
+        holidays: "",
+        favoriteCelebrities: "",
+        seminarVideos: [],
+      };
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      nameKana: "",
-      birthPlace: "",
-      education: [
-        { type: "小学校", schoolName: "", period: "" },
-        { type: "中学校", schoolName: "", period: "" },
-        { type: "高等学校", schoolName: "", period: "" },
-        { type: "大学", schoolName: "", period: "" },
-      ],
-      workHistory: [],
-      skills: [],
-      knowledge: [],
-      projects: [],
-      familyStructure: "",
-      parentsOccupation: "",
-      lessons: "",
-      clubs: "",
-      partTimeJobs: "",
-      circles: "",
-      hobbies: "",
-      favoriteFoods: "",
-      holidays: "",
-      favoriteCelebrities: "",
-      seminarVideos: [],
-    },
+    defaultValues:values,
   })
+
 
   // フォームの値を取得
   const { watch, setValue } = form
@@ -157,6 +178,21 @@ export default function ProfileForm() {
   const workHistory = watch("workHistory")
   const knowledge = watch("knowledge")
   const seminarVideos = watch("seminarVideos")
+
+  useEffect(() => {
+    api.get(`/employees/${id}`)
+      .then((res) => {
+        setEmployees(res.data);
+      })
+      .catch((err) => console.error(err));
+  }, []);
+
+  useEffect(() => {
+    const subscription = watch((value) => {
+      localStorage.setItem("profile-form", JSON.stringify(value));
+    });
+    return () => subscription.unsubscribe();
+  }, [watch]);
 
   // スキル追加
   const addSkill = () => {
@@ -288,12 +324,38 @@ export default function ProfileForm() {
 
   // フォーム送信
   const onSubmit = (data: FormValues) => {
-    console.log(data)
-    // ここでAPIにデータを送信する処理を実装
     alert("プロフィール情報が保存されました")
+    const { employee_id, birthdate, ...rest } = data;
+    const employees_update: EmployeeUpdate = {
+      ...rest,
+      birthdate: birthdate ? birthdate.toISOString().split("T")[0] : undefined,
+    };
+    const filteredData: EmployeeUpdate = Object.fromEntries(
+      Object.entries(employees_update).filter(([_, value]) => value != null && value !== "")
+    );
+    console.log(filteredData);
+    api.put(`/employees/${id}`, filteredData, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+      .then((res) => {
+        console.log("更新成功:", res.data);
+      })
+      .catch((err) => {
+        console.error("更新失敗:", err);
+      });
+    localStorage.clear();
+    router.replace("../")
   }
 
+
   // 次のタブに移動
+  const handleNextTabClick = (e: React.MouseEvent) => {
+    e.preventDefault(); // submit を防ぐ
+    goToNextTab();
+  };
+
   const goToNextTab = () => {
     if (activeTab === "basic") setActiveTab("professional")
     else if (activeTab === "professional") setActiveTab("personal")
@@ -309,9 +371,6 @@ export default function ProfileForm() {
 
   // 編集の修了
   const router = useRouter()
-  const finishEditing = () => {
-    router.replace("../view")
-  }
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl">
@@ -358,7 +417,27 @@ export default function ProfileForm() {
                       <Separator className="my-6" />
 
                       <h2 className="text-xl font-semibold">基本情報</h2>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-4 px-1">
+
+                        <FormField
+                          control={form.control}
+                          name="employee_id"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>社員番号</FormLabel>
+                              <FormControl>
+                                {employees && (
+                                  <Input
+                                    {...field}
+                                    value={`${id}`}
+                                    readOnly/>
+                                )}
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
                         <FormField
                           control={form.control}
                           name="name"
@@ -366,7 +445,13 @@ export default function ProfileForm() {
                             <FormItem>
                               <FormLabel>氏名</FormLabel>
                               <FormControl>
-                                <Input placeholder="山田 太郎" {...field} />
+                                {employees && (
+                                  <Input
+                                    placeholder={employees?.name ?? "None"}
+                                    {...field}
+                                    value={field.value ?? ''}
+                                />
+                                )}
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -375,12 +460,18 @@ export default function ProfileForm() {
 
                         <FormField
                           control={form.control}
-                          name="nameKana"
+                          name="kana"
                           render={({ field }) => (
                             <FormItem>
                               <FormLabel>フリガナ</FormLabel>
                               <FormControl>
-                                <Input placeholder="ヤマダ タロウ" {...field} />
+                                {employees && (
+                                  <Input
+                                    placeholder={employees?.kana ?? "None"}
+                                    {...field}
+                                    value={field.value ?? ''}
+                                />
+                                )}
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -388,12 +479,12 @@ export default function ProfileForm() {
                         />
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-4">
                         <FormField
                           control={form.control}
-                          name="birthDate"
+                          name="birthdate"
                           render={({ field }) => (
-                            <FormItem className="flex flex-col">
+                            <FormItem className="flex flex-col px-1">
                               <FormLabel>生年月日</FormLabel>
                               <Popover>
                                 <PopoverTrigger asChild>
@@ -406,8 +497,10 @@ export default function ProfileForm() {
                                     >
                                       {field.value ? (
                                         format(field.value, "yyyy年MM月dd日", { locale: ja })
+                                      ) : employees?.birthdate ? (
+                                        format(employees.birthdate, "yyyy年MM月dd日", { locale: ja })
                                       ) : (
-                                        <span>日付を選択</span>
+                                        "None"
                                       )}
                                       <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                     </Button>
@@ -416,10 +509,20 @@ export default function ProfileForm() {
                                 <PopoverContent className="w-auto p-0" align="start">
                                   <Calendar
                                     mode="single"
-                                    selected={field.value}
+                                    selected={field.value ?? undefined}
                                     onSelect={field.onChange}
                                     disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
                                     initialFocus
+                                    captionLayout="dropdown"
+                                    fromYear={1900}
+                                    toYear={new Date().getFullYear()}
+                                    classNames={{
+                                      caption_label: "hidden",
+                                      caption_dropdowns: "flex gap-2 justify-center",
+                                      dropdown: "border px-2 py-1 rounded-md text-sm",
+                                      dropdown_year: "bg-white",
+                                      dropdown_month: "bg-white",
+                                    }}
                                   />
                                 </PopoverContent>
                               </Popover>
@@ -428,14 +531,20 @@ export default function ProfileForm() {
                           )}
                         />
 
-                        <FormField
+                      <FormField
                           control={form.control}
-                          name="birthPlace"
+                          name="hometown"
                           render={({ field }) => (
-                            <FormItem>
+                            <FormItem className = "px-1">
                               <FormLabel>出身地</FormLabel>
                               <FormControl>
-                                <Input placeholder="東京都" {...field} />
+                                {employees && (
+                                    <Input
+                                      placeholder={employees?.hometown ?? "None"}
+                                      {...field}
+                                      value={field.value ?? ''}
+                                    />
+                                  )}
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -446,39 +555,139 @@ export default function ProfileForm() {
                       <Separator className="my-6" />
 
                       <h2 className="text-xl font-semibold">学歴</h2>
-                      <div className="space-y-4">
-                        {form.watch("education").map((edu, index) => (
-                          <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormField
-                              control={form.control}
-                              name={`education.${index}.schoolName`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>{edu.type}</FormLabel>
-                                  <FormControl>
-                                    <Input placeholder={`${edu.type}名`} {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={form.control}
-                              name={`education.${index}.period`}
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>期間</FormLabel>
-                                  <FormControl>
-                                    <Input placeholder="2010年4月 - 2013年3月" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                        ))}
-                      </div>
-
+                      <FormField
+                          control={form.control}
+                          name="elementary_school"
+                          render={({ field }) => (
+                            <FormItem  className = "px-1">
+                              <FormLabel>小学校</FormLabel>
+                              <FormControl>
+                                {employees && (
+                                  <Input
+                                    placeholder={employees?.elementary_school ?? "None"}
+                                    {...field}
+                                    value={field.value ?? ''}
+                                />
+                                )}
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                      />
+                      <FormField
+                          control={form.control}
+                          name="junior_high_school"
+                          render={({ field }) => (
+                            <FormItem className = "px-1">
+                              <FormLabel>中学校</FormLabel>
+                              <FormControl>
+                                {employees && (
+                                  <Input
+                                    placeholder={employees?.junior_high_school ?? "None"}
+                                    {...field}
+                                    value={field.value ?? ''}
+                                />
+                                )}
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="high_school"
+                          render={({ field }) => (
+                            <FormItem className = "px-1">
+                              <FormLabel>高校</FormLabel>
+                              <FormControl>
+                                {employees && (
+                                  <Input
+                                    placeholder={employees?.high_school ?? "None"}
+                                    {...field}
+                                    value={field.value ?? ''}
+                                />
+                                )}
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="university"
+                          render={({ field }) => (
+                            <FormItem className = "px-1">
+                              <FormLabel>大学</FormLabel>
+                              <FormControl>
+                                {employees && (
+                                  <Input
+                                    placeholder={employees?.university ?? "None"}
+                                    {...field}
+                                    value={field.value ?? ''}
+                                  />
+                                )}
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="faculty"
+                          render={({ field }) => (
+                            <FormItem className = "px-1">
+                              <FormLabel>学部学科</FormLabel>
+                              <FormControl>
+                                {employees && (
+                                  <Input
+                                    placeholder={employees?.faculty ?? "None"}
+                                    {...field}
+                                    value={field.value ?? ''}
+                                  />
+                                )}
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="graduate_school"
+                          render={({ field }) => (
+                            <FormItem className = "px-1">
+                              <FormLabel>大学院</FormLabel>
+                              <FormControl>
+                                {employees && (
+                                  <Input
+                                    placeholder={employees?.graduate_school ?? "None"}
+                                    {...field}
+                                    value={field.value ?? ''}
+                                  />
+                                )}
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="major"
+                          render={({ field }) => (
+                            <FormItem className = "px-1">
+                              <FormLabel>専攻</FormLabel>
+                              <FormControl>
+                                {employees && (
+                                  <Input
+                                    placeholder={employees?.major ?? "None"}
+                                    {...field}
+                                    value={field.value ?? ''}
+                                  />
+                                )}
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                       <Separator className="my-6" />
 
                       <h2 className="text-xl font-semibold">職歴</h2>
@@ -1069,11 +1278,11 @@ export default function ProfileForm() {
               </Button>
 
               {activeTab !== "media" ? (
-                <Button type="button" onClick={goToNextTab}>
+                <Button type="button" onClick={handleNextTabClick}>
                   次へ <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
               ) : (
-                <Button type="submit" onClick={finishEditing}>
+                <Button type="submit">
                   <Save className="mr-2 h-4 w-4" /> 保存
                 </Button>
               )}
@@ -1084,3 +1293,5 @@ export default function ProfileForm() {
     </div>
   )
 }
+
+export default ProfileForm;
