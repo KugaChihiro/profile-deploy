@@ -126,12 +126,21 @@ const ProfileForm: FC<Props> = ({ id }) => {
   const [currentProjectIndex, setCurrentProjectIndex] = useState(0)
   const [employees, setEmployees] = useState<EmployeeOut | null>(null)
 
+  let values: FormValues;
 
   // フォームの初期化
   const saved = typeof window !== "undefined" ? localStorage.getItem("profile-form") : null;
-  const values: FormValues = saved
-    ? JSON.parse(saved)
-    : {
+if (saved) {
+  const parsed = JSON.parse(saved);
+
+  if (parsed.birthdate && typeof parsed.birthdate === "string") {
+    const date = new Date(parsed.birthdate);
+    parsed.birthdate = isNaN(date.getTime()) ? undefined : date;
+  }
+
+  values = parsed;
+} else {
+  values ={
         // 基本情報
         employee_id: undefined,
         name: "",
@@ -164,6 +173,8 @@ const ProfileForm: FC<Props> = ({ id }) => {
         favoriteCelebrities: "",
         seminarVideos: [],
       };
+  }
+
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -322,13 +333,21 @@ const ProfileForm: FC<Props> = ({ id }) => {
     )
   }
 
+  const toLocalDateString = (date: Date): string => {
+    const yyyy = date.getFullYear();
+    const mm = (date.getMonth() + 1).toString().padStart(2, "0");
+    const dd = date.getDate().toString().padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+
   // フォーム送信
   const onSubmit = (data: FormValues) => {
-    alert("プロフィール情報が保存されました")
+    alert("プロフィール情報が保存されました");
     const { employee_id, birthdate, ...rest } = data;
     const employees_update: EmployeeUpdate = {
       ...rest,
-      birthdate: birthdate ? birthdate.toISOString().split("T")[0] : undefined,
+      birthdate: birthdate ? toLocalDateString(birthdate) : undefined,
     };
     const filteredData: EmployeeUpdate = Object.fromEntries(
       Object.entries(employees_update).filter(([_, value]) => value != null && value !== "")
@@ -346,8 +365,9 @@ const ProfileForm: FC<Props> = ({ id }) => {
         console.error("更新失敗:", err);
       });
     localStorage.clear();
-    router.replace("../")
-  }
+    router.replace("../");
+  };
+
 
 
   // 次のタブに移動
