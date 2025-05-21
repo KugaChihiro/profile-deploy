@@ -4,7 +4,7 @@
 export type EmployeeBase = {
   name?: string | null;
   kana?: string | null;
-  birthdate?: string | null; // ISO日付文字列
+  birthdate?: string | null;
   hometown?: string | null;
   elementary_school?: string | null;
   junior_high_school?: string | null;
@@ -18,10 +18,9 @@ export type EmployeeBase = {
 
 // 作成時（POST）
 export type EmployeeCreate = {
-  id: number;
-  employee_id: number;
-} & Required<Pick<EmployeeBase, 'name' | 'kana' | 'birthdate'>> &
-  Omit<EmployeeBase, 'name' | 'kana' | 'birthdate'>;
+  employee_id: number| null;
+} & Required<Pick<EmployeeBase, 'name'>>
+  & Omit<EmployeeBase, 'name'>;
 
 // 更新時（PUT）
 export type EmployeeUpdate = Partial<EmployeeBase>;

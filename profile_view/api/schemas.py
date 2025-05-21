@@ -5,11 +5,10 @@ from typing import Optional
 # employee 基本情報
 
 class EmployeeCreate(BaseModel):
-    id: int
     employee_id: int
     name: str
-    kana: str
-    birthdate: date
+    kana: str = None
+    birthdate: date = None
     hometown: Optional[str] = None
     elementary_school: Optional[str] = None
     junior_high_school: Optional[str] = None

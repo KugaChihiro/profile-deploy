@@ -1,135 +1,321 @@
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import Image from "next/image"
-import { Trash2, Plus, Edit } from "lucide-react"
+import { Trash2, Plus, Edit, X } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { api } from "@/lib/api"
+import { EmployeeCreate } from "@/types/employee"
 
-// Define employee type
-interface Employee {
-  id:number
-  name: string
-  photoUrl: string
+type EditingStep = "employee_id" | "name" | "done"
+
+export type Employee = EmployeeCreate & {
+  id: number
   selected: boolean
+  editingStep: EditingStep
+  readOnly: boolean
 }
 
-
 const EmployeeDirectory = () => {
-  // Sample employee data
-  const [employees, setEmployees] = useState<Employee[]>([
-    {
-      id: 1,
-      name: "新規 社員",
-      photoUrl: "/placeholder.svg?height=200&width=200",
-      selected: false,
-    },
-  ])
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const router = useRouter()
+  const employeeIdRefs = useRef<Record<number, HTMLInputElement | null>>({})
+  const nameRefs = useRef<Record<number, HTMLInputElement | null>>({})
 
-  // Toggle employee selection
-  const toggleSelect = (id: number) => {
-    setEmployees(employees.map((emp) => (emp.id === id ? { ...emp, selected: !emp.selected } : emp)))
-  }
+  // フォーカス用エフェクト
+  useEffect(() => {
+    const last = employees[employees.length - 1]
+    if (last?.editingStep === "employee_id") {
+      setTimeout(() => employeeIdRefs.current[last.id]?.focus(), 0)
+    }
+  }, [employees])
 
-  // Delete selected employees
-  const deleteSelected = () => {
-    setEmployees(employees.filter((emp) => !emp.selected))
-  }
-
-  // Add new employee (placeholder function)
   const addEmployee = () => {
-    const newId = employees.length > 0 ? Math.max(...employees.map(emp => emp.id)) + 1 : 1;
+    const newId = employees.length > 0 ? Math.max(...employees.map((emp) => emp.id)) + 1 : 1
     const newEmployee: Employee = {
       id: newId,
-      name: "新規 社員",
-      role: "不明",
-      photoUrl: "/placeholder.svg?height=200&width=200",
+      name: "",
+      employee_id: null,
+      photo_url: "/placeholder.svg?height=200&width=200",
       selected: false,
+      editingStep: "employee_id",
+      readOnly: false,
     }
     setEmployees([...employees, newEmployee])
   }
 
-  const router = useRouter()
+  const isAnyIncomplete = employees.some(
+    (e) =>
+      !e.readOnly &&
+      ((e.editingStep === "employee_id" && e.employee_id === null) ||
+        (e.editingStep === "name" && (e.name ?? "").trim() === ""))
+  )
 
-  const goToDetail = (id: string) => {
-    router.push(`/${id}`);
-  };
+  const handleEditComplete = async (id: number) => {
+    setEmployees((prev) =>
+      prev.map((emp) => {
+        if (emp.id !== id) return emp
+
+        if (emp.editingStep === "employee_id" && emp.employee_id !== null) {
+          return { ...emp, editingStep: "name" }
+        }
+        if (emp.editingStep === "name" && (emp.name ?? "").trim() !== "") {
+          return { ...emp, editingStep: "done" }
+        }
+        return emp
+      })
+    )
+
+    const emp = employees.find((e) => e.id === id)
+    if (!emp) return
+
+    if (
+      emp.employee_id !== null &&
+      emp.editingStep === "name" &&
+      (emp.name ?? "").trim() !== ""
+    ) {
+      const isUnique = await checkEmployeeIdUnique(emp.employee_id)
+      if (isUnique) {
+        setEmployees((prev) =>
+          prev.map((e) => (e.id === id ? { ...e, readOnly: true } : e))
+        )
+        alert("登録されました")
+        await addNewEmployeeToDatabase(emp)
+        await reloadEmployeeList()
+      } else {
+        alert("社員番号が重複しています")
+        setEmployees((prev) =>
+          prev.map((e) =>
+            e.id === id ? { ...e, employee_id: null, editingStep: "employee_id" } : e
+          )
+        )
+        setTimeout(() => employeeIdRefs.current[id]?.focus(), 0)
+      }
+    } else if (emp.editingStep === "employee_id") {
+      setTimeout(() => nameRefs.current[id]?.focus(), 0)
+    }
+  }
+
+  const addNewEmployeeToDatabase = async (emp: Employee) => {
+    try {
+      const payload: EmployeeCreate = {
+        employee_id: emp.employee_id,
+        name: emp.name ?? null,
+      }
+
+      const res = await api.post("/employees/", payload, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+      console.log("更新成功:", res.data)
+    } catch (err) {
+      console.error("更新失敗:", err)
+    }
+  }
+
+  const reloadEmployeeList = async () => {
+    try {
+      const res = await api.get("/employees/");
+      const loadedEmployees: Employee[] = res.data.map((emp: EmployeeCreate & { id: number }) => ({
+        ...emp,
+        selected: false,
+        editingStep: "done",       // ← APIから返るのは完了済みの社員とみなす
+        readOnly: true,            // ← 編集完了済みとして扱う
+        photo_url: emp.photo_url ?? "/placeholder.svg?height=200&width=200", // デフォルト画像
+      }))
+      setEmployees(loadedEmployees)
+      console.log("社員リストを更新しました")
+    } catch (err) {
+      console.error("社員リストの取得に失敗しました:", err)
+    }
+  }
+
+  const checkEmployeeIdUnique = async (id: number): Promise<boolean> => {
+    const existingIds = employees.filter((e) => e.readOnly).map((e) => e.employee_id)
+    return !existingIds.includes(id)
+  }
+
+  const handleCancel = (id: number) => {
+    setEmployees((prev) => prev.filter((e) => e.id !== id))
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent, id: number) => {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      handleEditComplete(id)
+    }
+  }
+
+  const handleBlur = (id: number) => {
+    handleEditComplete(id)
+  }
+
+  const toggleSelect = (id: number) => {
+    setEmployees((prev) =>
+      prev.map((emp) => (emp.id === id ? { ...emp, selected: !emp.selected } : emp))
+    )
+  }
+
+  const deleteSelected = async () => {
+    const selectedEmployees = employees.filter((emp) => emp.selected && emp.readOnly)
+    for (const emp of selectedEmployees) {
+      try {
+        const res = await api.delete(`/employees/${emp.id}`)
+        console.log("削除成功:", res.data)
+      } catch (err) {
+        console.error("削除失敗:", err)
+      }
+    }
+
+    setEmployees((prev) => prev.filter((emp) => !(emp.selected && emp.readOnly)))
+  }
+
+  const goToDetail = (id: number) => {
+    router.push(`/${id}`)
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-800">プロフィール情報</h1>
           <div className="w-12 h-12 relative">
-            <Image src="/placeholder.svg?height=48&width=48" alt="Company Logo" fill className="object-contain" />
+            <Image
+              src="/placeholder.svg?height=48&width=48"
+              alt="Company Logo"
+              fill
+              className="object-contain"
+            />
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        {/* Employee Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {employees.map((employee) => (
-            <div key={employee.id} className="bg-white rounded-lg shadow-md overflow-hidden relative">
-              {/* Checkbox */}
+            <div
+              key={employee.id}
+              className="bg-white rounded-lg shadow-md overflow-hidden relative"
+            >
+              {/* チェックボックス */}
               <div className="absolute top-3 left-3 z-10">
                 <input
                   type="checkbox"
                   checked={employee.selected}
                   onChange={() => toggleSelect(employee.id)}
-                  className="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  className="h-5 w-5"
+                  disabled={isAnyIncomplete}
                 />
               </div>
 
-              {/* Employee Photo */}
+              {/* 中断ボタン */}
+              {!employee.readOnly && (
+                <button
+                  onClick={() => handleCancel(employee.id)}
+                  className="absolute top-3 right-3 z-10 text-gray-500 hover:text-red-600"
+                >
+                  <div className="flex gap-2 items-center">
+                    <p className="text-sm">追加を中断</p>
+                    <X />
+                  </div>
+                </button>
+              )}
+
               <div className="w-full h-48 relative">
                 <Image
-                  src={employee.photoUrl || "/placeholder.svg"}
-                  alt={employee.name}
+                  src={employee.photo_url}
+                  alt={employee.name || "写真"}
                   fill
                   className="object-cover"
                 />
               </div>
 
-              {/* Employee Details */}
-              <div className="p-4">
-                <p className="text-sm text-gray-500 mb-1">{employee.id}</p>
-                <h3 className="font-semibold text-lg mb-1">{employee.name}</h3>
+              <div className="p-4 space-y-2">
+                <input
+                  ref={(el) => {
+                    employeeIdRefs.current[employee.id] = el
+                  }}
+                  className="w-full px-2 py-1 rounded text-sm flex items-end"
+                  placeholder="社員番号を入力"
+                  value={employee.employee_id ?? ""}
+                  readOnly={employee.readOnly || employee.editingStep !== "employee_id"}
+                  onChange={(e) => {
+                  const val = e.target.value
+                 const numVal =
+                  val === "" ? null : isNaN(Number(val)) ? null : Number(val);
+                  setEmployees((prev) =>
+                    prev.map((emp) =>
+                      emp.id === employee.id ? { ...emp, employee_id: numVal } : emp
+                    )
+                  )
+                  }}
+                  onKeyDown={(e) => handleKeyDown(e, employee.id)}
+                  onBlur={() => handleBlur(employee.id)}
+                />
+                {employee.editingStep !== "employee_id" && (
+                  <input
+                    ref={(el) => {
+                      nameRefs.current[employee.id] = el
+                    }}
+                    className="w-full px-2 py-1 rounded pt-0"
+                    placeholder="名前を入力"
+                    value={employee.name ?? ""}
+                    readOnly={employee.readOnly || employee.editingStep !== "name"}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setEmployees((prev) =>
+                        prev.map((emp) =>
+                          emp.id === employee.id ? { ...emp, name: val } : emp
+                        )
+                      )
+                    }}
+                    onKeyDown={(e) => handleKeyDown(e, employee.id)}
+                    onBlur={() => handleBlur(employee.id)}
+                  />
+                )}
 
-                {/* Show Button */}
-                <button className="mt-4 w-full py-2 px-4 border border-gray-300 rounded-md flex items-center justify-center gap-2 hover:bg-gray-50 transition-colors" onClick={() => goToDetail(employee.id)}>
-                  <Edit size={16} />
-                  <span>詳細を見る</span>
-                </button>
+                {employee.readOnly && (
+                  <button
+                    onClick={() => goToDetail(employee.id)}
+                    disabled={isAnyIncomplete}
+                    className="w-full py-2 px-4 border border-gray-300 rounded-md flex items-center justify-center gap-2 hover:bg-gray-50"
+                  >
+                    <Edit size={16} />
+                    詳細を見る
+                  </button>
+                )}
               </div>
             </div>
           ))}
         </div>
       </main>
 
-      {/* Footer Actions */}
+      {/* 追加ボタン */}
       <div className="fixed bottom-8 inset-x-0 flex justify-center">
         <button
           onClick={addEmployee}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-full shadow-lg flex items-center gap-2 transition-colors"
+          disabled={isAnyIncomplete}
+          className="bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-full shadow-lg flex items-center gap-2"
         >
           <Plus size={20} />
-          <span>メンバーを追加</span>
+          メンバーを追加
         </button>
       </div>
 
-      {/* Delete Button */}
+      {/* 削除ボタン */}
       {employees.some((emp) => emp.selected) && (
         <div className="fixed bottom-8 right-8">
           <button
             onClick={deleteSelected}
-            className="bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-6 rounded-full shadow-lg flex items-center gap-2 transition-colors"
+            disabled={isAnyIncomplete}
+            className="bg-red-600 hover:bg-red-700 text-white py-3 px-6 rounded-full shadow-lg flex items-center gap-2"
           >
             <Trash2 size={20} />
-            <span>削除</span>
+            削除
           </button>
         </div>
       )}
     </div>
   )
-};
-export default EmployeeDirectory;
+}
+
+export default EmployeeDirectory
