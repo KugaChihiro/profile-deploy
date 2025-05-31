@@ -28,6 +28,8 @@ const EmployeeDirectory = () => {
     }
   }, [employees])
 
+
+
   const addEmployee = () => {
     const newId = employees.length > 0 ? Math.max(...employees.map((emp) => emp.id)) + 1 : 1
     const newEmployee: Employee = {
@@ -94,23 +96,58 @@ const EmployeeDirectory = () => {
     }
   }
 
-  const addNewEmployeeToDatabase = async (emp: Employee) => {
-    try {
-      const payload: EmployeeCreate = {
-        employee_id: emp.employee_id,
-        name: emp.name ?? null,
-      }
-
-      const res = await api.post("/employees/", payload, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      })
-      console.log("更新成功:", res.data)
-    } catch (err) {
-      console.error("更新失敗:", err)
-    }
+const addNewEmployeeToDatabase = async (emp: Employee) => {
+  const payload_name: EmployeeCreate = {
+    employee_id: emp.employee_id,
+    name: emp.name ?? null,
   }
+
+  const payload = {
+    employee_id: emp.employee_id,
+  }
+
+  try {
+    console.log("payload for private_info:", payload)
+
+    // 複数のリクエストを順番に実行（失敗したら例外を投げる）
+    await api.post("/employees/", payload_name, {
+      headers: { "Content-Type": "application/json" },
+    });
+
+    await api.post("/employment_history/", payload, {
+      headers: { "Content-Type": "application/json" },
+    });
+
+    await api.post("/project_info/", payload, {
+      headers: { "Content-Type": "application/json" },
+    });
+
+    await api.post("/skill_info/", payload, {
+      headers: { "Content-Type": "application/json" },
+    });
+
+    await api.post("/insight_info/", payload, {
+      headers: { "Content-Type": "application/json" },
+    });
+
+    await api.post("/private_info/", payload, {
+      headers: { "Content-Type": "application/json" },
+    });
+
+    await api.post("/related_info/", payload, {
+      headers: { "Content-Type": "application/json" },
+    });
+
+    await api.post("/operation_logs/", payload, {
+      headers: { "Content-Type": "application/json" },
+    });
+
+    console.log("すべての更新に成功しました");
+  } catch (err) {
+    console.error("更新に失敗しました:", err);
+  }
+};
+
 
   const reloadEmployeeList = async () => {
     try {
@@ -128,6 +165,10 @@ const EmployeeDirectory = () => {
       console.error("社員リストの取得に失敗しました:", err)
     }
   }
+
+  useEffect(() => {
+    reloadEmployeeList()
+  }, [])
 
   const checkEmployeeIdUnique = async (id: number): Promise<boolean> => {
     const existingIds = employees.filter((e) => e.readOnly).map((e) => e.employee_id)
