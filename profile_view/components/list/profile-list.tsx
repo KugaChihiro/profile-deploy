@@ -110,35 +110,35 @@ const addNewEmployeeToDatabase = async (emp: Employee) => {
     console.log("payload for private_info:", payload)
 
     // 複数のリクエストを順番に実行（失敗したら例外を投げる）
-    await api.post("/employees/", payload_name, {
+    await api.post("/employees", payload_name, {
       headers: { "Content-Type": "application/json" },
     });
 
-    await api.post("/employment_history/", payload, {
+    await api.post("/employment_history", payload, {
       headers: { "Content-Type": "application/json" },
     });
 
-    await api.post("/project_info/", payload, {
+    await api.post("/project_info", payload, {
       headers: { "Content-Type": "application/json" },
     });
 
-    await api.post("/skill_info/", payload, {
+    await api.post("/skill_info", payload, {
       headers: { "Content-Type": "application/json" },
     });
 
-    await api.post("/insight_info/", payload, {
+    await api.post("/insight_info", payload, {
       headers: { "Content-Type": "application/json" },
     });
 
-    await api.post("/private_info/", payload, {
+    await api.post("/private_info", payload, {
       headers: { "Content-Type": "application/json" },
     });
 
-    await api.post("/related_info/", payload, {
+    await api.post("/related_info", payload, {
       headers: { "Content-Type": "application/json" },
     });
 
-    await api.post("/operation_logs/", payload, {
+    await api.post("/operation_logs", payload, {
       headers: { "Content-Type": "application/json" },
     });
 
@@ -151,7 +151,7 @@ const addNewEmployeeToDatabase = async (emp: Employee) => {
 
   const reloadEmployeeList = async () => {
     try {
-      const res = await api.get("/employees/");
+      const res = await api.get("/employees");
       const loadedEmployees: Employee[] = res.data.map((emp: EmployeeOut ) => ({
         ...emp,
         selected: false,
