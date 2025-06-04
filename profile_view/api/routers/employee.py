@@ -14,10 +14,10 @@ async def read_employees(db: AsyncSession = Depends(get_db)):
     return await employee_crud.get_all(db)
 
 
-# 特定の社員情報を取得（GET /employees/{employee_id}）
-@router.get("/{employee_id}", response_model=EmployeeOut)
-async def read_employee(employee_id: int, db: AsyncSession = Depends(get_db)):
-    employee = await employee_crud.get(db, "employee_id", employee_id)
+# 特定の社員情報を取得（GET /employees/{id}）Add commentMore actions
+@router.get("/{id}", response_model=EmployeeOut)
+async def read_employee(id: int, db: AsyncSession = Depends(get_db)):
+    employee = await employee_crud.get(db, "id", id)
     if not employee:
         raise HTTPException(status_code=404, detail="Employee not found")
     return employee
@@ -29,19 +29,19 @@ async def create_employee(employee: EmployeeCreate, db: AsyncSession = Depends(g
     return await employee_crud.create(db, employee.dict())
 
 
-# 更新（PUT /employees/{employee_id}）
-@router.put("/{employee_id}", response_model=EmployeeOut)
-async def update_employee(employee_id: int, update: EmployeeUpdate, db: AsyncSession = Depends(get_db)):
-    updated = await employee_crud.update(db, "employee_id", employee_id, update.dict(exclude_unset=True))
+# 更新（PUT /employees/{id}）
+@router.put("/{id}", response_model=EmployeeOut)
+async def update_employee(id: int, update: EmployeeUpdate, db: AsyncSession = Depends(get_db)):
+    updated = await employee_crud.update(db, "id", id, update.dict(exclude_unset=True))
     if not updated:
         raise HTTPException(status_code=404, detail="Employee not found")
     return updated
 
 
-# 削除（DELETE /employees/{employee_id}）
-@router.delete("/{employee_id}")
-async def delete_employee(employee_id: int, db: AsyncSession = Depends(get_db)):
-    success = await employee_crud.delete(db, "employee_id", employee_id)
+# 削除（DELETE /employees/{id}）
+@router.delete("/{id}")
+async def delete_employee(id: int, db: AsyncSession = Depends(get_db)):
+    success = await employee_crud.delete(db, "id", id)
     if not success:
         raise HTTPException(status_code=404, detail="Employee not found")
     return {"detail": "Employee deleted"}
