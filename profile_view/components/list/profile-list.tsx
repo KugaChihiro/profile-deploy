@@ -196,39 +196,39 @@ const addNewEmployeeToDatabase = async (emp: Employee) => {
     )
   }
 
-  const deleteSelected = async () => {
+  const deleteSelected = async (id: number) => {
     const selectedEmployees = employees.filter((emp) => emp.selected && emp.readOnly)
     for (const emp of selectedEmployees) {
       try {
-          await api.delete("/employment_history/${emp.id}/", {
+          await api.delete(`/employment_history/${emp.id}/`, {
             headers: { "Content-Type": "application/json" },
           });
 
-          await api.delete("/project_info/${emp.id}/", {
+          await api.delete(`/project_info/${emp.id}/`, {
             headers: { "Content-Type": "application/json" },
           });
 
-          await api.delete("/skill_info/${emp.id}/", {
+          await api.delete(`/skill_info/${emp.id}/`, {
             headers: { "Content-Type": "application/json" },
           });
 
-          await api.delete("/insight_info/${emp.id}/" ,{
+          await api.delete(`/insight_info/${emp.id}/` ,{
             headers: { "Content-Type": "application/json" },
           });
 
-          await api.delete("/private_info/${emp.id}/",{
+          await api.delete(`/private_info/${emp.id}/`,{
             headers: { "Content-Type": "application/json" },
           });
 
-          await api.delete("/related_info/${emp.id}/",{
+          await api.delete(`/related_info/${emp.id}/`,{
             headers: { "Content-Type": "application/json" },
           });
 
-          await api.delete("/operation_logs/${emp.id}/",  {
+          await api.delete(`/operation_logs/${emp.id}/`,  {
             headers: { "Content-Type": "application/json" },
           });
 
-          await api.delete("/employees/${emp.id}/", {
+          await api.delete(`/employees/${emp.id}`, {
             headers: { "Content-Type": "application/json" },
           });
 
