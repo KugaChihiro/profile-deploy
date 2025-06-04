@@ -3,7 +3,7 @@ import Image from "next/image"
 import { Trash2, Plus, Edit, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { api } from "@/lib/api"
-import { EmployeeCreate } from "@/types/employee"
+import { EmployeeCreate,EmployeeOut } from "@/types/employee"
 
 type EditingStep = "employee_id" | "name" | "done"
 
@@ -152,7 +152,7 @@ const addNewEmployeeToDatabase = async (emp: Employee) => {
   const reloadEmployeeList = async () => {
     try {
       const res = await api.get("/employees/");
-      const loadedEmployees: Employee[] = res.data.map((emp: EmployeeCreate & { id: number }) => ({
+      const loadedEmployees: Employee[] = res.data.map((emp: EmployeeOut ) => ({
         ...emp,
         selected: false,
         editingStep: "done",       // ← APIから返るのは完了済みの社員とみなす
@@ -200,15 +200,48 @@ const addNewEmployeeToDatabase = async (emp: Employee) => {
     const selectedEmployees = employees.filter((emp) => emp.selected && emp.readOnly)
     for (const emp of selectedEmployees) {
       try {
-        const res = await api.delete(`/employees/${emp.id}`)
-        console.log("削除成功:", res.data)
-      } catch (err) {
-        console.error("削除失敗:", err)
-      }
+          await api.delete("/employment_history/${emp.id}/", {
+            headers: { "Content-Type": "application/json" },
+          });
+
+          await api.delete("/project_info/${emp.id}/", {
+            headers: { "Content-Type": "application/json" },
+          });
+
+          await api.delete("/skill_info/${emp.id}/", {
+            headers: { "Content-Type": "application/json" },
+          });
+
+          await api.delete("/insight_info/${emp.id}/" ,{
+            headers: { "Content-Type": "application/json" },
+          });
+
+          await api.delete("/private_info/${emp.id}/",{
+            headers: { "Content-Type": "application/json" },
+          });
+
+          await api.delete("/related_info/${emp.id}/",{
+            headers: { "Content-Type": "application/json" },
+          });
+
+          await api.delete("/operation_logs/${emp.id}/",  {
+            headers: { "Content-Type": "application/json" },
+          });
+
+          await api.delete("/employees/${emp.id}/", {
+            headers: { "Content-Type": "application/json" },
+          });
+
+          console.log("削除に成功しました");
+        } catch (err) {
+          console.error("削除に失敗しました:", err);
+        }
     }
 
     setEmployees((prev) => prev.filter((emp) => !(emp.selected && emp.readOnly)))
   }
+
+
 
   const goToDetail = (id: number) => {
     router.push(`/${id}`)
