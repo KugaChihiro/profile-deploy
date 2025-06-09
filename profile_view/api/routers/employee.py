@@ -14,7 +14,7 @@ async def read_employees(db: AsyncSession = Depends(get_db)):
     return await employee_crud.get_all(db)
 
 
-# 特定の社員情報を取得（GET /employees/{id}）Add commentMore actions
+# 特定の社員情報を取得（GET /employees/{id}）
 @router.get("/{id}", response_model=EmployeeOut)
 async def read_employee(id: int, db: AsyncSession = Depends(get_db)):
     employee = await employee_crud.get(db, "id", id)

@@ -127,7 +127,7 @@ const formSchema = z.object({
   favorite_artists: z.string().optional().nullable(),
   favorite_comedians: z.string().optional().nullable(),
 
- // 関連情報
+  // 関連情報
   profile_video: z.string().optional().nullable(),
   seminar_videos: z
     .array(
@@ -146,7 +146,6 @@ type Props = {
 
 const ProfileForm: FC<Props> = ({ id }) => {
   const [activeTab, setActiveTab] = useState("basic")
-  const [newSkill, setNewSkill] = useState("")
   const [currentProjectIndex, setCurrentProjectIndex] = useState(0)
   const [employees, setEmployees] = useState<EmployeeOut | null>(null)
   const [employmentHistory, setEmploymentHistory] = useState<EmploymentHistoryOut | null>(null);
@@ -155,38 +154,16 @@ const ProfileForm: FC<Props> = ({ id }) => {
   const [skillInfo, setSkillInfo] = useState<SkillInfoOut | null>(null);
   const [privateInfo, setPrivateInfo] = useState<PrivateInfoOut | null>(null);
   const [relatedInfo, setRelatedInfo] = useState<RelatedInfoOut | null>(null);
+  const router = useRouter()
 
-
-  let values: FormValues
-
-  // フォームの初期化
-
-  const saved = typeof window !== "undefined" ? localStorage.getItem("profile-form") : null
-  if (saved) {
-    const parsed = JSON.parse(saved)
-
-    if (parsed.birthdate && typeof parsed.birthdate === "string") {
-      const date = new Date(parsed.birthdate)
-      parsed.birthdate = isNaN(date.getTime()) ? undefined : date
-    }
-
-    if (Array.isArray(parsed.seminarVideos)) {
-      parsed.seminarVideos = parsed.seminarVideos.map((s: any) => ({
-        ...s,
-        date: s.date ? new Date(s.date) : undefined,
-      }))
-    }
-
-    values = parsed
-  } else {
-    values = {
-      // 基本情報
-      employee_id: employees?.employee_id,
+  // フォームの初期化。defaultValuesは後ほどreset()で上書きする。
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
       name: "",
       kana: "",
       birthdate: undefined,
       hometown: "",
-      // 学歴
       elementary_school: "",
       junior_high_school: "",
       high_school: "",
@@ -195,7 +172,6 @@ const ProfileForm: FC<Props> = ({ id }) => {
       graduate_school: "",
       major: "",
       photo_url: "",
-      // プライベート
       blood_type: "",
       nickname: "",
       mbti: "",
@@ -214,17 +190,13 @@ const ProfileForm: FC<Props> = ({ id }) => {
       favorite_characters: "",
       favorite_artists: "",
       favorite_comedians: "",
-      employment_history: employmentHistory ? [employmentHistory]: [],
-      project_info:projectInfo ? [projectInfo] : [],
-      insight_info:insightInfo ? [insightInfo] : [],
-      skill_info:skillInfo ? [skillInfo] : [],
-      seminar_videos:[],
-    }
-  }
-
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: values,
+      profile_video: "",
+      employment_history: [],
+      project_info: [],
+      insight_info: [],
+      skill_info: [],
+      seminar_videos: [],
+    },
   })
 
   // フォームの値を取得
@@ -235,58 +207,107 @@ const ProfileForm: FC<Props> = ({ id }) => {
   const knowledge = watch("insight_info")
   const seminarVideos = watch("seminar_videos")
 
+  // APIからデータを取得するためのuseEffect
   useEffect(() => {
-
     api.get(`/employees/${id}`)
       .then((res) => {
         setEmployees(res.data);
       })
-      .catch((err) => console.error("基本情報の保存に失敗:", err.response?.data || err));
+      .catch((err) => console.error("基本情報の取得に失敗:", err.response?.data || err));
 
     api.get(`/employment_history/${id}`)
       .then((res) => {
         setEmploymentHistory(res.data);
       })
-      .catch((err) => console.error("職歴の保存に失敗:", err.response?.data || err));
+      .catch((err) => console.error("職歴の取得に失敗:", err.response?.data || err));
 
     api.get(`/project_info/${id}`)
       .then((res) => {
         setProjectInfo(res.data);
       })
-      .catch((err) => console.error("プロジェクトの保存に失敗:", err.response?.data || err));
+      .catch((err) => console.error("プロジェクトの取得に失敗:", err.response?.data || err));
 
     api.get(`/insight_info/${id}`)
       .then((res) => {
         setInsightInfo(res.data);
       })
-      .catch((err) => console.error("知見の保存に失敗:", err.response?.data || err));
+      .catch((err) => console.error("知見の取得に失敗:", err.response?.data || err));
 
     api.get(`/skill_info/${id}`)
       .then((res) => {
         setSkillInfo(res.data);
       })
-      .catch((err) => console.error("スキルの保存に失敗:", err.response?.data || err));
+      .catch((err) => console.error("スキルの取得に失敗:", err.response?.data || err));
 
     api.get(`/private_info/${id}`)
       .then((res) => {
         setPrivateInfo(res.data);
       })
-      .catch((err) => console.error("プライベートの保存に失敗:", err.response?.data || err));
+      .catch((err) => console.error("プライベートの取得に失敗:", err.response?.data || err));
 
     api.get(`/related_info/${id}`)
       .then((res) => {
         setRelatedInfo(res.data);
       })
-      .catch((err) => console.error("関連情報の保存に失敗:", err.response?.data || err));
+      .catch((err) => console.error("関連情報の取得に失敗:", err.response?.data || err));
 
-  }, []);
+  }, [id]);
 
+
+  // 取得したデータを監視し、フォームに値をセットするためのuseEffect
   useEffect(() => {
-    const subscription = watch((value) => {
-      localStorage.setItem("profile-form", JSON.stringify(value))
-    })
-    return () => subscription.unsubscribe()
-  }, [watch])
+    // 関連する全てのデータが取得完了したら実行
+    if (employees && employmentHistory && projectInfo && insightInfo && skillInfo && privateInfo && relatedInfo) {
+      // APIレスポンス（カンマ区切り文字列等）をフォームが要求するデータ構造に変換
+      const formattedValues = {
+        // 基本情報
+        ...employees,
+        birthdate: employees.birthdate ? new Date(employees.birthdate) : undefined,
+
+        // プライベート情報
+        ...privateInfo,
+
+        // 関連情報
+        ...relatedInfo,
+
+        // 職歴: カンマ区切り文字列をオブジェクトの配列に変換
+        employment_history: employmentHistory.company_name?.split(',').map((name, index) => ({
+            company_name: name,
+            job_title: employmentHistory.job_title?.split(',')[index] ?? null,
+            start_date: employmentHistory.start_date?.split(',')[index] ?? null,
+            end_date: employmentHistory.end_date?.split(',')[index] ?? null,
+            description: employmentHistory.description?.split(',')[index] ?? null,
+            knowledge: employmentHistory.knowledge?.split('\\,')[index]?.replace(/\\/g, ',') ?? null,
+        })).filter(item => item.company_name) ?? [], // 空の要素を除外
+
+        // 業務情報: カンマ区切り文字列をオブジェクトの配列に変換
+        project_info: projectInfo.project?.split(',').map((proj, index) => ({
+            project: proj,
+            comment: projectInfo.comment?.split(',')[index] ?? null,
+            skill: projectInfo.skill?.split('\\,')[index]?.replace(/\\/g, ',') ?? null,
+            start_date: projectInfo.start_date?.split(',')[index] ?? null,
+            end_date: projectInfo.end_date?.split(',')[index] ?? null,
+        })).filter(item => item.project) ?? [],
+
+        // 知見情報: カンマ区切り文字列をオブジェクトの配列に変換
+        insight_info: insightInfo.insight?.split(',').map((ins, index) => ({
+            insight: ins,
+            comment: insightInfo.comment?.split(',')[index] ?? null,
+            skill: insightInfo.skill?.split('\\,')[index]?.replace(/\\/g, ',') ?? null,
+        })).filter(item => item.insight) ?? [],
+
+        // スキル情報: カンマ区切り文字列をオブジェクトの配列に変換
+        skill_info: skillInfo.skill?.split(',').map(s => ({ skill: s })).filter(item => item.skill) ?? [],
+
+        // セミナー動画: カンマ区切り文字列をオブジェクトの配列に変換
+        seminar_videos: relatedInfo.seminar_videos?.split(',').map(s => ({ seminar_videos: s.trim() })).filter(item => item.seminar_videos) ?? [],
+      };
+
+      // form.reset() を使ってフォームの値を一括で更新
+      form.reset(formattedValues as FormValues);
+    }
+  }, [employees, employmentHistory, projectInfo, insightInfo, skillInfo, privateInfo, relatedInfo, form.reset]);
+
 
   // スキル追加
   const addSkill = () => {
@@ -302,7 +323,7 @@ const ProfileForm: FC<Props> = ({ id }) => {
   const removeSkill = (index: number) => {
     setValue(
       "skill_info",
-       skills.filter((_, i) => i !== index),
+        skills.filter((_, i) => i !== index),
     )
   }
 
@@ -581,10 +602,20 @@ const ProfileForm: FC<Props> = ({ id }) => {
   };
 
   const onSubmitRelatedInfo = (data: FormValues) => {
+    // seminar_videos配列を取得（なければ空の配列）
+    const seminarArray = data.seminar_videos || [];
+
+    // 配列内の各オブジェクトからURL文字列を抽出し、カンマ区切りに変換
+    const formattedSeminarVideos = seminarArray
+      .map(video => video.seminar_videos ?? "")
+      .filter(url => url !== "") // 空のURLを除外
+      .join(",");
+
     const payload = {
       profile_video: data.profile_video,
-      seminarVideos: data.seminar_videos,
+      seminar_videos: formattedSeminarVideos, // カンマ区切りに変換した文字列をセット
     };
+
     return api.put(`/related_info/${id}`, payload);
   };
 
@@ -635,9 +666,6 @@ const ProfileForm: FC<Props> = ({ id }) => {
     else if (activeTab === "personal") setActiveTab("professional")
     else if (activeTab === "professional") setActiveTab("basic")
   }
-
-  // 編集の修了
-  const router = useRouter()
 
   return (
     <div className="container mx-auto px-4 pt-8 max-w-5xl">
@@ -719,9 +747,7 @@ const ProfileForm: FC<Props> = ({ id }) => {
                             <FormItem>
                               <FormLabel>氏名</FormLabel>
                               <FormControl>
-                                {employees && (
                                   <Input placeholder={employees?.name ?? "氏名を入力"} {...field} value={field.value ?? ""} />
-                                )}
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -735,9 +761,7 @@ const ProfileForm: FC<Props> = ({ id }) => {
                             <FormItem>
                               <FormLabel>フリガナ</FormLabel>
                               <FormControl>
-                                {employees && (
                                   <Input placeholder={employees?.kana ?? "フリガナを記入"} {...field} value={field.value ?? ""} />
-                                )}
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -764,8 +788,8 @@ const ProfileForm: FC<Props> = ({ id }) => {
                                       {field.value
                                         ? format(field.value, "yyyy-MM-dd", { locale: ja })
                                         : employees?.birthdate
-                                          ? format(employees.birthdate, "yyyy-MM-dd", { locale: ja })
-                                          : "誕生日を入力  /  記入例 : yyyy-MM-dd"}
+                                        ? format(new Date(employees.birthdate), "yyyy-MM-dd", { locale: ja })
+                                        : "誕生日を入力  /  記入例 : yyyy-MM-dd"}
                                       <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                     </Button>
                                   </FormControl>
@@ -802,13 +826,11 @@ const ProfileForm: FC<Props> = ({ id }) => {
                             <FormItem className="px-1">
                               <FormLabel>出身地</FormLabel>
                               <FormControl>
-                                {employees && (
                                   <Input
                                     placeholder={employees?.hometown ?? "出身地を入力"}
                                     {...field}
                                     value={field.value ?? ""}
                                   />
-                                )}
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -826,13 +848,11 @@ const ProfileForm: FC<Props> = ({ id }) => {
                           <FormItem className="px-1">
                             <FormLabel>小学校</FormLabel>
                             <FormControl>
-                              {employees && (
                                 <Input
                                   placeholder={employees?.elementary_school ?? "小学校名を入力"}
                                   {...field}
                                   value={field.value ?? ""}
                                 />
-                              )}
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -845,13 +865,11 @@ const ProfileForm: FC<Props> = ({ id }) => {
                           <FormItem className="px-1">
                             <FormLabel>中学校</FormLabel>
                             <FormControl>
-                              {employees && (
                                 <Input
                                   placeholder={employees?.junior_high_school ?? "中学校名を入力"}
                                   {...field}
                                   value={field.value ?? ""}
                                 />
-                              )}
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -864,13 +882,11 @@ const ProfileForm: FC<Props> = ({ id }) => {
                           <FormItem className="px-1">
                             <FormLabel>高校</FormLabel>
                             <FormControl>
-                              {employees && (
                                 <Input
                                   placeholder={employees?.high_school ?? "高校名を入力"}
                                   {...field}
                                   value={field.value ?? ""}
                                 />
-                              )}
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -883,13 +899,11 @@ const ProfileForm: FC<Props> = ({ id }) => {
                           <FormItem className="px-1">
                             <FormLabel>大学</FormLabel>
                             <FormControl>
-                              {employees && (
                                 <Input
                                   placeholder={employees?.university ?? "大学名を入力"}
                                   {...field}
                                   value={field.value ?? ""}
                                 />
-                              )}
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -902,13 +916,11 @@ const ProfileForm: FC<Props> = ({ id }) => {
                           <FormItem className="px-1">
                             <FormLabel>学部学科</FormLabel>
                             <FormControl>
-                              {employees && (
                                 <Input
                                   placeholder={employees?.faculty ?? "大学における所属学部及び学科を入力"}
                                   {...field}
                                   value={field.value ?? ""}
                                 />
-                              )}
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -921,13 +933,11 @@ const ProfileForm: FC<Props> = ({ id }) => {
                           <FormItem className="px-1">
                             <FormLabel>大学院</FormLabel>
                             <FormControl>
-                              {employees && (
                                 <Input
                                   placeholder={employees?.graduate_school ?? "大学院名を入力"}
                                   {...field}
                                   value={field.value ?? ""}
                                 />
-                              )}
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -940,9 +950,7 @@ const ProfileForm: FC<Props> = ({ id }) => {
                           <FormItem className="px-1">
                             <FormLabel>専攻</FormLabel>
                             <FormControl>
-                              {employees && (
                                 <Input placeholder={employees?.major ?? "大学院における専攻を入力"} {...field} value={field.value ?? ""} />
-                              )}
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -964,7 +972,8 @@ const ProfileForm: FC<Props> = ({ id }) => {
                               <X className="h-4 w-4" />
                             </Button>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            {/* --- 会社名（変更なし） --- */}
+                            <div className="mb-4">
                               <FormField
                                 control={form.control}
                                 name={`employment_history.${index}.company_name`}
@@ -978,20 +987,47 @@ const ProfileForm: FC<Props> = ({ id }) => {
                                   </FormItem>
                                 )}
                               />
+                            </div>
 
+                            {/* --- 開始日・終了日（ここから変更） --- */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                               <FormField
                                 control={form.control}
                                 name={`employment_history.${index}.start_date`}
                                 render={({ field }) => (
-                                  <FormItem>
+                                  <FormItem className="flex flex-col">
                                     <FormLabel>開始日</FormLabel>
-                                    <FormControl>
-                                      <Input
-                                        placeholder="開始日を入力  /  記入例 : 20XX-0X-0X"
-                                        {...field}
-                                        value={field.value ?? ""}
-                                      />
-                                    </FormControl>
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <FormControl>
+                                          <Button
+                                            variant={"outline"}
+                                            className={`w-full pl-3 text-left font-normal ${
+                                              !field.value ? "text-muted-foreground" : ""
+                                            }`}
+                                          >
+                                            {field.value ? (
+                                              field.value
+                                            ) : (
+                                              <span>開始日を選択</span>
+                                            )}
+                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                          </Button>
+                                        </FormControl>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                          mode="single"
+                                          // カレンダーには文字列をDateオブジェクトに変換して渡す
+                                          selected={field.value ? new Date(field.value) : undefined}
+                                          // 選択されたDateを文字列に変換してフォームに保存
+                                          onSelect={(date) => {
+                                            field.onChange(date ? format(date, 'yyyy-MM-dd') : undefined);
+                                          }}
+                                          initialFocus
+                                        />
+                                      </PopoverContent>
+                                    </Popover>
                                     <FormMessage />
                                   </FormItem>
                                 )}
@@ -1000,20 +1036,45 @@ const ProfileForm: FC<Props> = ({ id }) => {
                                 control={form.control}
                                 name={`employment_history.${index}.end_date`}
                                 render={({ field }) => (
-                                  <FormItem>
+                                  <FormItem className="flex flex-col">
                                     <FormLabel>終了日</FormLabel>
-                                    <FormControl>
-                                      <Input
-                                        placeholder="終了日を入力  /  記入例 : 20XX-0X-0X"
-                                        {...field}
-                                        value={field.value ?? ""}
-                                      />
-                                    </FormControl>
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <FormControl>
+                                          <Button
+                                            variant={"outline"}
+                                            className={`w-full pl-3 text-left font-normal ${
+                                              !field.value ? "text-muted-foreground" : ""
+                                            }`}
+                                          >
+                                            {field.value ? (
+                                              field.value
+                                            ) : (
+                                              <span>終了日を選択</span>
+                                            )}
+                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                          </Button>
+                                        </FormControl>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                          mode="single"
+                                          // カレンダーには文字列をDateオブジェクトに変換して渡す
+                                          selected={field.value ? new Date(field.value) : undefined}
+                                          // 選択されたDateを文字列に変換してフォームに保存
+                                          onSelect={(date) => {
+                                            field.onChange(date ? format(date, 'yyyy-MM-dd') : undefined);
+                                          }}
+                                          initialFocus
+                                        />
+                                      </PopoverContent>
+                                    </Popover>
                                     <FormMessage />
                                   </FormItem>
                                 )}
                               />
                             </div>
+                            {/* --- 開始日・終了日（ここまで変更） --- */}
 
                             <FormField
                               control={form.control}
@@ -1203,7 +1264,8 @@ const ProfileForm: FC<Props> = ({ id }) => {
                               <X className="h-4 w-4" />
                             </Button>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            {/* --- プロジェクト名（変更なし） --- */}
+                            <div className="mb-4">
                               <FormField
                                 control={form.control}
                                 name={`project_info.${index}.project`}
@@ -1221,21 +1283,48 @@ const ProfileForm: FC<Props> = ({ id }) => {
                                   </FormItem>
                                 )}
                               />
+                            </div>
 
+                            {/* --- 開始日・終了日（ここから変更） --- */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                               <FormField
                                 control={form.control}
                                 name={`project_info.${index}.start_date`}
                                 render={({ field }) => (
-                                  <FormItem>
+                                  <FormItem className="flex flex-col">
                                     <FormLabel>開始日</FormLabel>
-                                    <FormControl>
-                                      <Input
-                                        placeholder="開始日を入力  /  記入例 : 20XX-0X-0X"
-                                        {...field}
-                                        value={field.value ?? ""}
-
-                                      />
-                                    </FormControl>
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <FormControl>
+                                          <Button
+                                            variant={"outline"}
+                                            className={`w-full pl-3 text-left font-normal ${
+                                              !field.value ? "text-muted-foreground" : ""
+                                            }`}
+                                          >
+                                            {/* field.valueは文字列なのでそのまま表示 */}
+                                            {field.value ? (
+                                              field.value
+                                            ) : (
+                                              <span>開始日を選択</span>
+                                            )}
+                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                          </Button>
+                                        </FormControl>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                          mode="single"
+                                          // カレンダーには文字列をDateオブジェクトに変換して渡す
+                                          selected={field.value ? new Date(field.value) : undefined}
+                                          // 選択されたDateを文字列に変換してフォームに保存
+                                          onSelect={(date) => {
+                                            field.onChange(date ? format(date, 'yyyy-MM-dd') : undefined);
+                                          }}
+                                          initialFocus
+                                        />
+                                      </PopoverContent>
+                                    </Popover>
                                     <FormMessage />
                                   </FormItem>
                                 )}
@@ -1244,21 +1333,46 @@ const ProfileForm: FC<Props> = ({ id }) => {
                                 control={form.control}
                                 name={`project_info.${index}.end_date`}
                                 render={({ field }) => (
-                                  <FormItem>
+                                  <FormItem className="flex flex-col">
                                     <FormLabel>終了日</FormLabel>
-                                    <FormControl>
-                                      <Input
-                                        placeholder="終了日を入力  /  記入例 : 20XX-0X-0X"
-                                        {...field}
-                                        value={field.value ?? ""}
-                                      />
-                                    </FormControl>
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <FormControl>
+                                          <Button
+                                            variant={"outline"}
+                                            className={`w-full pl-3 text-left font-normal ${
+                                              !field.value ? "text-muted-foreground" : ""
+                                            }`}
+                                          >
+                                            {/* field.valueは文字列なのでそのまま表示 */}
+                                            {field.value ? (
+                                              field.value
+                                            ) : (
+                                              <span>終了日を選択</span>
+                                            )}
+                                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                          </Button>
+                                        </FormControl>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                          mode="single"
+                                          // カレンダーには文字列をDateオブジェクトに変換して渡す
+                                          selected={field.value ? new Date(field.value) : undefined}
+                                          // 選択されたDateを文字列に変換してフォームに保存
+                                          onSelect={(date) => {
+                                            field.onChange(date ? format(date, 'yyyy-MM-dd') : undefined);
+                                          }}
+                                          initialFocus
+                                        />
+                                      </PopoverContent>
+                                    </Popover>
                                     <FormMessage />
                                   </FormItem>
                                 )}
                               />
-
                             </div>
+                            {/* --- 開始日・終了日（ここまで変更） --- */}
 
                             <FormField
                               control={form.control}
@@ -1299,6 +1413,8 @@ const ProfileForm: FC<Props> = ({ id }) => {
                           </div>
                         ))}
 
+
+
                         <Button type="button" variant="outline" className="w-full" onClick={addProject}>
                           <Plus className="mr-2 h-4 w-4" /> プロジェクトを追加
                         </Button>
@@ -1319,9 +1435,7 @@ const ProfileForm: FC<Props> = ({ id }) => {
                             <FormItem>
                               <FormLabel>家族構成</FormLabel>
                               <FormControl>
-                                {privateInfo && (
                                   <Input placeholder={privateInfo?.family_structure ?? "家族構成を入力  /  記入例 : 父・母・本人"} {...field} value={field.value ?? ""} />
-                                )}
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -1336,9 +1450,7 @@ const ProfileForm: FC<Props> = ({ id }) => {
                               <FormItem>
                                 <FormLabel>父親の職業</FormLabel>
                                 <FormControl>
-                                  {privateInfo && (
                                     <Input placeholder={privateInfo?.father_job ?? "職業名を入力"} {...field} value={field.value ?? ""} />
-                                  )}
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -1351,9 +1463,7 @@ const ProfileForm: FC<Props> = ({ id }) => {
                               <FormItem>
                                 <FormLabel>母親の職業</FormLabel>
                                 <FormControl>
-                                  {privateInfo && (
                                     <Input placeholder={privateInfo?.mother_job ?? "職業名を入力"} {...field} value={field.value ?? ""} />
-                                  )}
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -1369,9 +1479,7 @@ const ProfileForm: FC<Props> = ({ id }) => {
                               <FormItem>
                                 <FormLabel>血液型</FormLabel>
                                 <FormControl>
-                                  {privateInfo && (
                                     <Input placeholder={privateInfo?.blood_type ?? "血液型を入力  /  記入例 : O型"} {...field} value={field.value ?? ""} />
-                                  )}
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -1384,9 +1492,7 @@ const ProfileForm: FC<Props> = ({ id }) => {
                               <FormItem>
                                 <FormLabel>ニックネーム</FormLabel>
                                 <FormControl>
-                                  {privateInfo && (
                                     <Input placeholder={privateInfo?.nickname ?? "ニックネームを入力"} {...field} value={field.value ?? ""} />
-                                  )}
                                 </FormControl>
                                 <FormMessage />
                               </FormItem>
@@ -1401,9 +1507,7 @@ const ProfileForm: FC<Props> = ({ id }) => {
                             <FormItem>
                               <FormLabel>MBTI（性格タイプ）</FormLabel>
                               <FormControl>
-                                  {privateInfo && (
-                                    <Input placeholder={privateInfo?.mbti ?? "MBTIを入力  /  記入例 : ISTJ"} {...field} value={field.value ?? ""} />
-                                  )}
+                                  <Input placeholder={privateInfo?.mbti ?? "MBTIを入力  /  記入例 : ISTJ"} {...field} value={field.value ?? ""} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -1422,14 +1526,12 @@ const ProfileForm: FC<Props> = ({ id }) => {
                             <FormItem>
                               <FormLabel>習い事</FormLabel>
                               <FormControl>
-                                  {privateInfo && (
-                                    <Textarea
-                                      placeholder={privateInfo?.lessons ?? "習い事を入力  /  記入例 : 水泳 (2歳～10歳)・ピアノ (5歳～10歳)"}
-                                      {...field}
-                                      rows={2}
-                                      value={field.value ?? ""}
-                                    />
-                                  )}
+                                  <Textarea
+                                    placeholder={privateInfo?.lessons ?? "習い事を入力  /  記入例 : 水泳 (2歳～10歳)・ピアノ (5歳～10歳)"}
+                                    {...field}
+                                    rows={2}
+                                    value={field.value ?? ""}
+                                  />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -1443,14 +1545,12 @@ const ProfileForm: FC<Props> = ({ id }) => {
                             <FormItem>
                               <FormLabel>部活</FormLabel>
                               <FormControl>
-                                  {privateInfo && (
-                                    <Textarea
-                                      placeholder={privateInfo?.club_activities ?? "部活を入力  /  記入例 : サッカー部 (中学) ・ テニス部 (高校)"}
-                                      {...field}
-                                      rows={2}
-                                      value={field.value ?? ""}
-                                    />
-                                  )}
+                                  <Textarea
+                                    placeholder={privateInfo?.club_activities ?? "部活を入力  /  記入例 : サッカー部 (中学) ・ テニス部 (高校)"}
+                                    {...field}
+                                    rows={2}
+                                    value={field.value ?? ""}
+                                  />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -1464,14 +1564,12 @@ const ProfileForm: FC<Props> = ({ id }) => {
                             <FormItem>
                               <FormLabel>アルバイト</FormLabel>
                               <FormControl>
-                                  {privateInfo && (
-                                    <Textarea
-                                      placeholder={privateInfo?.jobs ?? "アルバイト経験を入力  /  記入例 : カフェ店員 (大学1年時) ・ レストランスタッフ (大学2年時)"}
-                                      {...field}
-                                      rows={2}
-                                      value={field.value ?? ""}
-                                    />
-                                  )}
+                                  <Textarea
+                                    placeholder={privateInfo?.jobs ?? "アルバイト経験を入力  /  記入例 : カフェ店員 (大学1年時) ・ レストランスタッフ (大学2年時)"}
+                                    {...field}
+                                    rows={2}
+                                    value={field.value ?? ""}
+                                  />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -1485,14 +1583,12 @@ const ProfileForm: FC<Props> = ({ id }) => {
                             <FormItem>
                               <FormLabel>サークル</FormLabel>
                               <FormControl>
-                                  {privateInfo && (
-                                    <Textarea
-                                      placeholder={privateInfo?.lessons ?? "習い事を記入  /  記入例 : 水泳 (2歳～10歳)・ピアノ (5歳～10歳)"}
-                                      {...field}
-                                      rows={2}
-                                      value={field.value ?? ""}
-                                    />
-                                  )}
+                                  <Textarea
+                                    placeholder={privateInfo?.lessons ?? "習い事を記入  /  記入例 : 水泳 (2歳～10歳)・ピアノ (5歳～10歳)"}
+                                    {...field}
+                                    rows={2}
+                                    value={field.value ?? ""}
+                                  />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -1511,14 +1607,12 @@ const ProfileForm: FC<Props> = ({ id }) => {
                             <FormItem>
                               <FormLabel>趣味</FormLabel>
                               <FormControl>
-                                  {privateInfo && (
-                                    <Textarea
-                                      placeholder={privateInfo?.hobbies ?? "趣味を入力  /  記入例 : テニス ・ カラオケ"}
-                                      {...field}
-                                      rows={2}
-                                      value={field.value ?? ""}
-                                    />
-                                  )}
+                                  <Textarea
+                                    placeholder={privateInfo?.hobbies ?? "趣味を入力  /  記入例 : テニス ・ カラオケ"}
+                                    {...field}
+                                    rows={2}
+                                    value={field.value ?? ""}
+                                  />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -1532,14 +1626,12 @@ const ProfileForm: FC<Props> = ({ id }) => {
                             <FormItem>
                               <FormLabel>好きな食べ物</FormLabel>
                               <FormControl>
-                                  {privateInfo && (
-                                    <Textarea
-                                      placeholder={privateInfo?.favorite_foods ?? "好きな食べ物を入力  /  記入例 : 焼肉 ・ ラーメン"}
-                                      {...field}
-                                      rows={2}
-                                      value={field.value ?? ""}
-                                    />
-                                  )}
+                                  <Textarea
+                                    placeholder={privateInfo?.favorite_foods ?? "好きな食べ物を入力  /  記入例 : 焼肉 ・ ラーメン"}
+                                    {...field}
+                                    rows={2}
+                                    value={field.value ?? ""}
+                                  />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -1553,14 +1645,12 @@ const ProfileForm: FC<Props> = ({ id }) => {
                             <FormItem>
                               <FormLabel>苦手な食べ物</FormLabel>
                               <FormControl>
-                                  {privateInfo && (
-                                    <Textarea
-                                      placeholder={privateInfo?.disliked_foods ?? "嫌いな食べ物を入力  /  記入例 : ゴーヤ ・ ピーマン"}
-                                      {...field}
-                                      rows={2}
-                                      value={field.value ?? ""}
-                                    />
-                                  )}
+                                  <Textarea
+                                    placeholder={privateInfo?.disliked_foods ?? "嫌いな食べ物を入力  /  記入例 : ゴーヤ ・ ピーマン"}
+                                    {...field}
+                                    rows={2}
+                                    value={field.value ?? ""}
+                                  />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -1574,14 +1664,12 @@ const ProfileForm: FC<Props> = ({ id }) => {
                             <FormItem>
                               <FormLabel>休日の過ごし方</FormLabel>
                               <FormControl>
-                                  {privateInfo && (
-                                    <Textarea
-                                      placeholder={privateInfo?.holiday_activities ?? "休日の過ごし方を入力  /  記入例 : 友達と外食 ・ 一人カラオケ"}
-                                      {...field}
-                                      rows={2}
-                                      value={field.value ?? ""}
-                                    />
-                                  )}
+                                  <Textarea
+                                    placeholder={privateInfo?.holiday_activities ?? "休日の過ごし方を入力  /  記入例 : 友達と外食 ・ 一人カラオケ"}
+                                    {...field}
+                                    rows={2}
+                                    value={field.value ?? ""}
+                                  />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -1595,14 +1683,12 @@ const ProfileForm: FC<Props> = ({ id }) => {
                             <FormItem>
                               <FormLabel>好きな芸能人</FormLabel>
                               <FormControl>
-                                  {privateInfo && (
-                                    <Textarea
-                                      placeholder={privateInfo?.favorite_celebrities ?? "好きな芸能人を入力  /  記入例 : 佐藤健 ・ 新垣結衣 ・ 星野源"}
-                                      {...field}
-                                      rows={2}
-                                      value={field.value ?? ""}
-                                    />
-                                  )}
+                                  <Textarea
+                                    placeholder={privateInfo?.favorite_celebrities ?? "好きな芸能人を入力  /  記入例 : 佐藤健 ・ 新垣結衣 ・ 星野源"}
+                                    {...field}
+                                    rows={2}
+                                    value={field.value ?? ""}
+                                  />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -1616,14 +1702,12 @@ const ProfileForm: FC<Props> = ({ id }) => {
                             <FormItem>
                               <FormLabel>好きなキャラクター</FormLabel>
                               <FormControl>
-                                  {privateInfo && (
-                                    <Textarea
-                                      placeholder={privateInfo?.favorite_characters ?? "好きなキャラクターを入力  /  記入例 : ドラえもん ・ スヌーピー"}
-                                      {...field}
-                                      rows={2}
-                                      value={field.value ?? ""}
-                                    />
-                                  )}
+                                  <Textarea
+                                    placeholder={privateInfo?.favorite_characters ?? "好きなキャラクターを入力  /  記入例 : ドラえもん ・ スヌーピー"}
+                                    {...field}
+                                    rows={2}
+                                    value={field.value ?? ""}
+                                  />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -1637,14 +1721,12 @@ const ProfileForm: FC<Props> = ({ id }) => {
                             <FormItem>
                               <FormLabel>好きなアーティスト</FormLabel>
                               <FormControl>
-                                  {privateInfo && (
-                                    <Textarea
-                                      placeholder={privateInfo?.favorite_artists ?? "好きなアーティストを入力  /  記入例 : Official髭男dism ・ あいみょん"}
-                                      {...field}
-                                      rows={2}
-                                      value={field.value ?? ""}
-                                    />
-                                  )}
+                                  <Textarea
+                                    placeholder={privateInfo?.favorite_artists ?? "好きなアーティストを入力  /  記入例 : Official髭男dism ・ あいみょん"}
+                                    {...field}
+                                    rows={2}
+                                    value={field.value ?? ""}
+                                  />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -1658,14 +1740,12 @@ const ProfileForm: FC<Props> = ({ id }) => {
                             <FormItem>
                               <FormLabel>好きな芸人</FormLabel>
                               <FormControl>
-                                  {privateInfo && (
-                                    <Textarea
-                                      placeholder={privateInfo?.favorite_comedians ?? "好きな芸人を入力  /  記入例 : サンドウィッチマン ・ 千鳥"}
-                                      {...field}
-                                      rows={2}
-                                      value={field.value ?? ""}
-                                    />
-                                  )}
+                                  <Textarea
+                                    placeholder={privateInfo?.favorite_comedians ?? "好きな芸人を入力  /  記入例 : サンドウィッチマン ・ 千鳥"}
+                                    {...field}
+                                    rows={2}
+                                    value={field.value ?? ""}
+                                  />
                               </FormControl>
                               <FormMessage />
                             </FormItem>

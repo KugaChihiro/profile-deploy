@@ -403,7 +403,7 @@ const ProfilePage: FC<Props> = ({ id }) => {
                   <div className = "flex gap-5 flex-wrap">
                     {parseSkillInfo().map((skillInfo, idx) => (
                       <div className="flex flex-wrap gap-2 mb-6"  key={idx} >
-                        <Badge className="bg-blue-500">{skillInfo.skill}</Badge>
+                        <Badge className="bg-blue-500">{skillInfo.skill ?? "None"}</Badge>
                       </div>
                     ))}
                   </div>
@@ -671,7 +671,7 @@ const ProfilePage: FC<Props> = ({ id }) => {
                       <video
                         className="w-full h-full object-cover"
                         controls
-                        src={relatedInfo?.profile_video}
+                        src={relatedInfo?.profile_video  || undefined}
                       >
                       </video>
                     </div>
@@ -693,7 +693,7 @@ const ProfilePage: FC<Props> = ({ id }) => {
                         <video
                           className="w-full h-full object-cover"
                           controls
-                          src={item}
+                          src={item  || undefined}
                         >
                         </video>
                       </div>
