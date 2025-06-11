@@ -7,6 +7,7 @@ from api.routers import skill_info
 from api.routers import private_info
 from api.routers import related_info
 from api.routers import operation_logs
+from api.routers import storage
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -27,3 +28,4 @@ app.include_router(skill_info.router)
 app.include_router(private_info.router)
 app.include_router(related_info.router)
 app.include_router(operation_logs.router)
+app.include_router(storage.router)

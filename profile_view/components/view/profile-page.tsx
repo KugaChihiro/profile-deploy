@@ -415,7 +415,7 @@ const ProfilePage: FC<Props> = ({ id }) => {
                     獲得知見
                   </h2>
                   {parseInsightInfo().map((insightInfo, idx) => (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4" key = {idx}>
+                    <div className="grid grid-cols-1 gap-4" key = {idx}>
                       <Card className="border-slate-200">
                         <CardContent className="p-4">
                           <h3 className="font-semibold mb-2">{insightInfo.insight}</h3>
@@ -538,12 +538,11 @@ const ProfilePage: FC<Props> = ({ id }) => {
                         <div className="space-y-4">
                           <div className="flex items-start gap-3">
                             <Music className="h-5 w-5 text-slate-500 mt-0.5" />
-                            <div className="flex ">
+                            <div>
                               <p className="text-sm text-slate-500">習い事</p>
                                 {privateInfo?.lessons?.split(',').map((item, index) => (
-                                  <p key={index}>{item.trim()}</p>
+                                  <p className="font-medium" key={index}>{item.trim()}</p>
                                 ))}
-                              <p className="font-medium">{privateInfo?.lessons}</p>
                             </div>
                           </div>
 

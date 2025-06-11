@@ -9,3 +9,5 @@ dotenv
 aioodbc
 pyodbc
 typing_extensions
+azure-storage-blob
+pydantic_settings

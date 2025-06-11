@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import date
 from typing import Optional
 
@@ -278,3 +278,16 @@ class OperationLogsOut(BaseModel):
     operation_datetime: Optional[date] = None
     class Config:
         orm_mode = True
+
+
+
+
+#  SASトークン発行リクエスト
+class SasTokenRequest(BaseModel):
+
+    file_name: str = Field(..., alias="fileName", description="アップロードするファイル名")
+
+# SASトークン発行レスポンス
+class SasTokenResponse(BaseModel):
+    sas_url: str = Field(..., alias="sasUrl", description="アップロードに使う一時的な署名付きURL")
+    storage_url: str = Field(..., alias="storageUrl", description="DBに保存する永続的なファイルのURL")
