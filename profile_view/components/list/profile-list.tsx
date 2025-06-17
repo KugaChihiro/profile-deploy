@@ -248,7 +248,7 @@ const addNewEmployeeToDatabase = async (emp: Employee) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 mt-7">
+    <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm">
         <div className="container mx-auto my-0 px-4 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-800">プロフィール情報</h1>

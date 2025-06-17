@@ -41,8 +41,9 @@ import {
   Tag,
   Puzzle,
   Carrot,
-  LinkIcon
+  LinkIcon,
 } from "lucide-react"
+
 
 type Props = {
   id: number;
