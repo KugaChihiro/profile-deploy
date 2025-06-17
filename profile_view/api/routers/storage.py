@@ -26,7 +26,7 @@ def generate_read_sas_url(blob_name: str) -> str:
         return ""
 
     # 読み取り用SASトークンの有効期限（例：1時間）
-    sas_expires_on = datetime.now(timezone.utc) + timedelta(hours=1)
+    sas_expires_on = datetime.now(timezone.utc) + timedelta(days=365*5)
 
     # 読み取り(Read)権限のみを持つSASトークンを生成
     token = generate_blob_sas(

@@ -40,7 +40,8 @@ import {
   Droplet,
   Tag,
   Puzzle,
-  Carrot
+  Carrot,
+  LinkIcon
 } from "lucide-react"
 
 type Props = {
@@ -210,7 +211,7 @@ const ProfilePage: FC<Props> = ({ id }) => {
       <Card className="shadow-lg border-none">
         <CardContent className="p-0">
           <div className="relative">
-            <div className="h-48 bg-gradient-to-r from-rose-400 via-fuchsia-500 to-indigo-500 rounded-t-lg"></div>
+            <div className="h-48 bg-gradient-to-r bg-gray-100 rounded-t-lg flex justify-center items-center via-gray-300 to-gray-100"><img src = "/logo.png" className = "w-3/5 rounded-t-lg"/></div>
             <div className="absolute -bottom-16 flex justify-between items-center w-full max-w-5xl pl-10">
               <Avatar className="h-32 w-32 border-4 border-white shadow-md">
                 {employees && (<AvatarImage src={employees.photo_url ?? "/placeholder.svg"} alt="プロフィール写真" />)}
@@ -540,9 +541,11 @@ const ProfilePage: FC<Props> = ({ id }) => {
                             <Music className="h-5 w-5 text-slate-500 mt-0.5" />
                             <div>
                               <p className="text-sm text-slate-500">習い事</p>
-                                {privateInfo?.lessons?.split(',').map((item, index) => (
-                                  <p className="font-medium" key={index}>{item.trim()}</p>
-                                ))}
+                                {privateInfo?.lessons
+                                  ?.split(/[,\/\\・\-、]/)
+                                  .map((item, index) => (
+                                    <p className="font-medium" key={index}>{item.trim()}</p>
+                                  ))}
                             </div>
                           </div>
 
@@ -550,7 +553,7 @@ const ProfilePage: FC<Props> = ({ id }) => {
                             <Dumbbell className="h-5 w-5 text-slate-500 mt-0.5" />
                             <div>
                               <p className="text-sm text-slate-500">部活</p>
-                                {privateInfo?.club_activities?.split(',').map((item, index) => (
+                                {privateInfo?.club_activities?.split(/[,\/\\・\-、]/).map((item, index) => (
                                   <p className="font-medium" key={index}>{item.trim()}</p>
                                 ))}
                             </div>
@@ -559,7 +562,7 @@ const ProfilePage: FC<Props> = ({ id }) => {
                             <Coffee className="h-5 w-5 text-slate-500 mt-0.5" />
                             <div>
                               <p className="text-sm text-slate-500">アルバイト</p>
-                                {privateInfo?.jobs?.split(',').map((item, index) => (
+                                {privateInfo?.jobs?.split(/[,\/\\・\-、]/).map((item, index) => (
                                   <p className="font-medium" key={index}>{item.trim()}</p>
                                 ))}
                             </div>
@@ -568,7 +571,7 @@ const ProfilePage: FC<Props> = ({ id }) => {
                           <CircleUser className="h-5 w-5 text-slate-500 mt-0.5" />
                           <div>
                             <p className="text-sm text-slate-500">サークル</p>
-                              {privateInfo?.circles?.split(',').map((item, index) => (
+                              {privateInfo?.circles?.split(/[,\/\\・\-、]/).map((item, index) => (
                                   <p className="font-medium" key={index}>{item.trim()}</p>
                               ))}
                           </div>
@@ -586,7 +589,7 @@ const ProfilePage: FC<Props> = ({ id }) => {
                         <Heart className="h-5 w-5 text-slate-500 mt-0.5" />
                         <div>
                           <p className="text-sm text-slate-500">趣味</p>
-                          {privateInfo?.hobbies?.split(',').map((item, index) => (
+                          {privateInfo?.hobbies?.split(/[,\/\\・\-、]/).map((item, index) => (
                             <p className="font-medium" key={index}>{item.trim()}</p>
                           ))}
                         </div>
@@ -596,7 +599,7 @@ const ProfilePage: FC<Props> = ({ id }) => {
                         <Pizza className="h-5 w-5 text-slate-500 mt-0.5" />
                         <div>
                           <p className="text-sm text-slate-500">好きな食べ物</p>
-                            {privateInfo?.favorite_foods?.split(',').map((item, index) => (
+                            {privateInfo?.favorite_foods?.split(/[,\/\\・\-、]/).map((item, index) => (
                               <p className="font-medium" key={index}>{item.trim()}</p>
                             ))}
                         </div>
@@ -606,8 +609,9 @@ const ProfilePage: FC<Props> = ({ id }) => {
                         <Carrot className="h-5 w-5 text-slate-500 mt-0.5" />
                         <div>
                           <p className="text-sm text-slate-500">嫌いな食べ物</p>
-                          <p className="font-medium">{privateInfo?.disliked_foods}</p>
-
+                          {privateInfo?.disliked_foods?.split(/[,\/\\・\-、]/).map((item, index) => (
+                            <p className="font-medium" key={index}>{item.trim()}</p>
+                          ))}
                         </div>
                       </div>
 
@@ -615,7 +619,7 @@ const ProfilePage: FC<Props> = ({ id }) => {
                         <Palmtree className="h-5 w-5 text-slate-500 mt-0.5" />
                         <div>
                           <p className="text-sm text-slate-500">休日の過ごし方</p>
-                            {privateInfo?.holiday_activities?.split(',').map((item, index) => (
+                            {privateInfo?.holiday_activities?.split(/[,\/\\・\-、]/).map((item, index) => (
                               <p className="font-medium" key={index}>{item.trim()}</p>
                             ))}
                         </div>
@@ -625,7 +629,7 @@ const ProfilePage: FC<Props> = ({ id }) => {
                         <Tv className="h-5 w-5 text-slate-500 mt-0.5" />
                         <div>
                           <p className="text-sm text-slate-500">好きな芸能人</p>
-                            {privateInfo?.favorite_celebrities?.split(',').map((item, index) => (
+                            {privateInfo?.favorite_celebrities?.split(/[,\/\\・\-、]/).map((item, index) => (
                               <p className="font-medium" key={index}>{item.trim()}</p>
                             ))}
                         </div>
@@ -634,7 +638,7 @@ const ProfilePage: FC<Props> = ({ id }) => {
                         <ToyBrick className="h-5 w-5 text-slate-500 mt-0.5" />
                         <div>
                           <p className="text-sm text-slate-500">好きなキャラクター</p>
-                            {privateInfo?.favorite_characters?.split(',').map((item, index) => (
+                            {privateInfo?.favorite_characters?.split(/[,\/\\・\-、]/).map((item, index) => (
                               <p className="font-medium" key={index}>{item.trim()}</p>
                             ))}
                         </div>
@@ -643,7 +647,7 @@ const ProfilePage: FC<Props> = ({ id }) => {
                         <Mic className="h-5 w-5 text-slate-500 mt-0.5" />
                         <div>
                           <p className="text-sm text-slate-500">好きなアーティスト</p>
-                            {privateInfo?.favorite_artists?.split(',').map((item, index) => (
+                            {privateInfo?.favorite_artists?.split(/[,\/\\・\-、]/).map((item, index) => (
                               <p className="font-medium" key={index}>{item.trim()}</p>
                             ))}
                         </div>
@@ -652,7 +656,7 @@ const ProfilePage: FC<Props> = ({ id }) => {
                         <Smile className="h-5 w-5 text-slate-500 mt-0.5" />
                         <div>
                           <p className="text-sm text-slate-500">好きなお笑い芸人</p>
-                            {privateInfo?.favorite_comedians?.split(',').map((item, index) => (
+                            {privateInfo?.favorite_comedians?.split(/[,\/\\・\-、]/).map((item, index) => (
                               <p className="font-medium" key={index}>{item.trim()}</p>
                             ))}
                         </div>
@@ -666,14 +670,27 @@ const ProfilePage: FC<Props> = ({ id }) => {
                 <div>
                   <h2 className="text-2xl font-bold mb-4">プロフィール動画</h2>
                   {relatedInfo?.profile_video? (
-                    <div className="aspect-video bg-black rounded-lg overflow-hidden">
-                      <video
-                        className="w-full h-full object-cover"
-                        controls
-                        src={relatedInfo?.profile_video  || undefined}
-                      >
-                      </video>
-                    </div>
+                    <>
+                      <div className="aspect-video bg-black rounded-lg overflow-hidden">
+                        <video
+                          className="w-full h-full object-cover"
+                          controls
+                          src={relatedInfo?.profile_video  || undefined}
+                        >
+                        </video>
+                      </div>
+                      <div className="mt-4 p-3 bg-gray-100 rounded-md border-gray-300 text-gray-700 break-all select-text cursor-text flex gap-2">
+                        <LinkIcon/>
+                        <a
+                          href={relatedInfo?.profile_video}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm hover:text-gray-300"
+                        >
+                          {relatedInfo?.profile_video}
+                        </a>
+                      </div>
+                    </>
                   ) : (
                     <div className="aspect-video bg-slate-100 rounded-lg flex items-center justify-center">
                       <div className="text-center p-6">
@@ -688,13 +705,26 @@ const ProfilePage: FC<Props> = ({ id }) => {
                   <h2 className="text-2xl font-bold mb-4">セミナー動画</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {relatedInfo?.seminar_videos?.split(',').map((item, index) => (
-                      <div className="aspect-video bg-black rounded-lg overflow-hidden"  key={index}>
-                        <video
-                          className="w-full h-full object-cover"
-                          controls
-                          src={item  || undefined}
-                        >
-                        </video>
+                      <div className = "flex flex-col"  key={index}>
+                        <div className="aspect-video bg-black rounded-lg overflow-hidden" >
+                          <video
+                            className="w-full h-full object-cover"
+                            controls
+                            src={item  || undefined}
+                          >
+                          </video>
+                        </div>
+                        <div className="mt-4 p-3 bg-gray-100 rounded-md border-gray-300 text-gray-700 break-all select-text cursor-text flex gap-2 items-center">
+                          <LinkIcon/>
+                          <a
+                            href={item  || undefined}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs hover:text-gray-300"
+                          >
+                            {item}
+                          </a>
+                        </div>
                       </div>
                     ))}
                   </div>

@@ -248,13 +248,13 @@ const addNewEmployeeToDatabase = async (emp: Employee) => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 mt-7">
       <header className="bg-white shadow-sm">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+        <div className="container mx-auto my-0 px-4 py-4 flex justify-between items-center">
           <h1 className="text-2xl font-bold text-gray-800">プロフィール情報</h1>
           <div className="w-12 h-12 relative">
             <Image
-              src="/placeholder.svg?height=48&width=48"
+              src="/iconimage.png?height=48&width=48"
               alt="Company Logo"
               fill
               className="object-contain"
