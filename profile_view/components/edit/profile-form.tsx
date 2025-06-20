@@ -538,7 +538,16 @@ const ProfileForm: FC<Props> = ({ id }) => {
                       <Separator className="my-6" />
 
                       <h2 className="text-xl font-semibold">趣味・好み</h2>
- ,
+                      <div className="grid grid-cols-1 gap-4">
+                        <FormField control={form.control} name="hobbies" render={({ field }) => ( <FormItem><FormLabel>趣味</FormLabel><FormControl><Textarea placeholder={privateInfo?.hobbies ?? "趣味を入力 / 記入例 : テニス ・ カラオケ"} {...field} rows={2} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="favorite_foods" render={({ field }) => ( <FormItem><FormLabel>好きな食べ物</FormLabel><FormControl><Textarea placeholder={privateInfo?.favorite_foods ?? "好きな食べ物を入力 / 記入例 : 焼肉 ・ ラーメン"} {...field} rows={2} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="disliked_foods" render={({ field }) => ( <FormItem><FormLabel>苦手な食べ物</FormLabel><FormControl><Textarea placeholder={privateInfo?.disliked_foods ?? "嫌いな食べ物を入力 / 記入例 : ゴーヤ ・ ピーマン"} {...field} rows={2} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="holiday_activities" render={({ field }) => ( <FormItem><FormLabel>休日の過ごし方</FormLabel><FormControl><Textarea placeholder={privateInfo?.holiday_activities ?? "休日の過ごし方を入力 / 記入例 : 友達と外食 ・ 一人カラオケ"} {...field} rows={2} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="favorite_celebrities" render={({ field }) => ( <FormItem><FormLabel>好きな芸能人</FormLabel><FormControl><Textarea placeholder={privateInfo?.favorite_celebrities ?? "好きな芸能人を入力 / 記入例 : 佐藤健 ・ 新垣結衣 ・ 星野源"} {...field} rows={2} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="favorite_characters" render={({ field }) => ( <FormItem><FormLabel>好きなキャラクター</FormLabel><FormControl><Textarea placeholder={privateInfo?.favorite_characters ?? "好きなキャラクターを入力 / 記入例 : ドラえもん ・ スヌーピー"} {...field} rows={2} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="favorite_artists" render={({ field }) => ( <FormItem><FormLabel>好きなアーティスト</FormLabel><FormControl><Textarea placeholder={privateInfo?.favorite_artists ?? "好きなアーティストを入力 / 記入例 : Official髭男dism ・ あいみょん"} {...field} rows={2} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="favorite_comedians" render={({ field }) => ( <FormItem><FormLabel>好きな芸人</FormLabel><FormControl><Textarea placeholder={privateInfo?.favorite_comedians ?? "好きな芸人を入力 / 記入例 : サンドウィッチマン ・ 千鳥"} {...field} rows={2} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                      </div>
                     </div>
                   </TabsContent>
 
