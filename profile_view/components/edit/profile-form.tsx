@@ -239,6 +239,7 @@ const ProfileForm: FC<Props> = ({ id }) => {
       if (!sasUrl || !storageUrl) throw new Error("SASトークンの取得に失敗しました。");
       const blobClient = new BlockBlobClient(sasUrl);
       await blobClient.uploadData(file, { blobHTTPHeaders: { blobContentType: file.type } });
+      setResetImage(true);
       return storageUrl;
     } catch (error) {
       console.error("アップロードエラー:", error);
