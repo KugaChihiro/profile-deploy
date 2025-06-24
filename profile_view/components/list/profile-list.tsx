@@ -364,11 +364,11 @@ const addNewEmployeeToDatabase = async (emp: Employee) => {
       </main>
 
       {/* 追加ボタン */}
-      <div className="fixed bottom-8 inset-x-0 flex justify-center">
+      <div className="fixed bottom-8 inset-x-0 flex justify-center pointer-events-none">
         <button
           onClick={addEmployee}
           disabled={isAnyIncomplete}
-          className="bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-full shadow-lg flex items-center gap-2"
+          className="bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-full shadow-lg flex items-center gap-2 pointer-events-auto"
         >
           <Plus size={20} />
           メンバーを追加

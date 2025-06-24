@@ -8,6 +8,7 @@ from api.routers import private_info
 from api.routers import related_info
 from api.routers import operation_logs
 from api.routers import storage
+from api.routers import reset_image
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -29,3 +30,4 @@ app.include_router(private_info.router)
 app.include_router(related_info.router)
 app.include_router(operation_logs.router)
 app.include_router(storage.router)
+app.include_router(reset_image.router)

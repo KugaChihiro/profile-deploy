@@ -50,6 +50,7 @@ import {
   ChevronLeft,
   Save,
   Loader2,
+  Trash
 } from "lucide-react"
 
 declare global {
@@ -160,11 +161,14 @@ const ProfileForm: FC<Props> = ({ id }) => {
   const [privateInfo, setPrivateInfo] = useState<PrivateInfoOut | null>(null);
   const [relatedInfo, setRelatedInfo] = useState<RelatedInfoOut | null>(null);
 
+
   // 画像アップロード関連のState
-  const [isUploading, setIsUploading] = useState(false)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null) // 既存画像の表示用
-  const [selectedFile, setSelectedFile] = useState<File | null>(null); // 新規選択ファイルの保持用
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isUploading, setIsUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null) ;
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [resetImage,setResetImage] = useState<boolean | null>(null);
 
   const router = useRouter()
 
@@ -314,23 +318,23 @@ const ProfileForm: FC<Props> = ({ id }) => {
   const onSubmit = async (data: FormValues) => {
     let finalData = { ...data };
     if (selectedFile) {
-      // 選択されている場合のみ、アップロード処理を実行
       const newPhotoUrl = await uploadImageAndGetUrl(selectedFile);
 
       if (newPhotoUrl) {
-        // アップロード成功時、送信データに新しい永続URLを設定
         finalData.photo_url = newPhotoUrl;
       } else {
-        // アップロード失敗時は、フォーム送信を中止
         alert("画像のアップロードに失敗したため、プロフィールを保存できませんでした。");
         return;
       }
     } else {
-      // 2. 新しいファイルが選択されていない場合
-      // 送信データから photo_url キー自体を削除する
-      // これにより、バックエンドは photo_url フィールドを更新しない
       delete finalData.photo_url;
     }
+
+    if (resetImage) {
+      api.put(`/reset_image/${id}`);
+      setResetImage(false)
+    }
+
     try {
       await Promise.all([
         onSubmitEmployeeInfo(finalData),
@@ -364,6 +368,12 @@ const ProfileForm: FC<Props> = ({ id }) => {
     if (activeTab === "media") setActiveTab("personal");
     else if (activeTab === "personal") setActiveTab("professional");
     else if (activeTab === "professional") setActiveTab("basic");
+  };
+
+  const handleResetImage = () => {
+    setSelectedFile(null);
+    setPreviewUrl(null);
+    setResetImage(true);
   };
 
   return (
@@ -406,10 +416,30 @@ const ProfileForm: FC<Props> = ({ id }) => {
                         </div>
 
                         <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/png, image/jpeg, image/gif" />
+                          <div className="flex items-center gap-4">
+                            {/* 写真を選択 */}
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={handleUploadButtonClick}
+                              disabled={form.formState.isSubmitting}
+                            >
+                              <Upload className="mr-2 h-4 w-4" />
+                              写真を選択
+                            </Button>
 
-                        <Button type="button" variant="outline" onClick={handleUploadButtonClick} disabled={form.formState.isSubmitting}>
-                          <Upload className="mr-2 h-4 w-4" />写真を選択
-                        </Button>
+                            {/* 選択中のときだけ表示 */}
+                            {(selectedFile || previewUrl) && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleResetImage}
+                              >
+                                <Trash className="mr-2 h-4 w-4"/>
+                                選択した写真をリセット
+                              </Button>
+                            )}
+                          </div>
                       </div>
                       <Separator className="my-6" />
 

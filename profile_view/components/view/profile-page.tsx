@@ -207,6 +207,14 @@ const ProfilePage: FC<Props> = ({ id }) => {
 
   }, []);
 
+  const  ProfileVideoClick = (url: string) => {
+    window.open(url, "_blank");
+  }
+
+  const  SeminarVideoClick = (url: string) => {
+    window.open(url, "_blank");
+  }
+
   return (
     <div className="container mx-auto px-4 max-w-5xl">
       <Card className="shadow-lg border-none">
@@ -672,7 +680,7 @@ const ProfilePage: FC<Props> = ({ id }) => {
                   <h2 className="text-2xl font-bold mb-4">プロフィール動画</h2>
                   {relatedInfo?.profile_video? (
                     <>
-                      <div className="aspect-video bg-black rounded-lg overflow-hidden">
+                      <div className="aspect-video bg-black rounded-lg overflow-hidden" onClick={() => ProfileVideoClick(relatedInfo?.profile_video ?? "")}>
                         <video
                           className="w-full h-full object-cover"
                           controls
@@ -707,7 +715,7 @@ const ProfilePage: FC<Props> = ({ id }) => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {relatedInfo?.seminar_videos?.split(',').map((item, index) => (
                       <div className = "flex flex-col"  key={index}>
-                        <div className="aspect-video bg-black rounded-lg overflow-hidden" >
+                        <div className="aspect-video bg-black rounded-lg overflow-hidden" onClick={() => SeminarVideoClick(item ?? "")}>
                           <video
                             className="w-full h-full object-cover"
                             controls
