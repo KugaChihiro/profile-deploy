@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react"
 import Image from "next/image"
-import { Trash2, Plus, Edit, X } from "lucide-react"
+import { Trash2, Plus, Edit, X, Loader2} from "lucide-react"
 import { useRouter } from "next/navigation"
 import { api } from "@/lib/api"
 import { EmployeeCreate,EmployeeOut } from "@/types/employee"
@@ -16,6 +16,7 @@ export type Employee = EmployeeCreate & {
 
 const EmployeeDirectory = () => {
   const [employees, setEmployees] = useState<Employee[]>([])
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter()
   const employeeIdRefs = useRef<Record<number, HTMLInputElement | null>>({})
   const nameRefs = useRef<Record<number, HTMLInputElement | null>>({})
@@ -27,6 +28,7 @@ const EmployeeDirectory = () => {
       setTimeout(() => employeeIdRefs.current[last.id]?.focus(), 0)
     }
   }, [employees])
+
 
 
 
@@ -155,12 +157,13 @@ const addNewEmployeeToDatabase = async (emp: Employee) => {
       const loadedEmployees: Employee[] = res.data.map((emp: EmployeeOut ) => ({
         ...emp,
         selected: false,
-        editingStep: "done",       // ← APIから返るのは完了済みの社員とみなす
-        readOnly: true,            // ← 編集完了済みとして扱う
-        photo_url: emp.photo_url ?? "/placeholder.svg?height=200&width=200", // デフォルト画像
+        editingStep: "done",
+        readOnly: true,
+        photo_url: emp.photo_url ?? "/placeholder.svg?height=200&width=200",
       }))
       setEmployees(loadedEmployees)
-      console.log("社員リストを更新しました")
+      setIsLoading(false)
+      console.log("社員リストを取得しました")
     } catch (err) {
       console.error("社員リストの取得に失敗しました:", err)
     }
@@ -388,6 +391,10 @@ const addNewEmployeeToDatabase = async (emp: Employee) => {
           </button>
         </div>
       )}
+      {isLoading && (<div className="fixed bottom-4 right-4 flex items-center gap-2 px-4 py-2 bg-white text-gray-800 shadow-lg rounded-lg border z-50">
+        <Loader2 className="animate-spin w-5 h-5 text-blue-500" />
+        <span className="text-sm">データ取得中…<br/>少々お待ちください</span>
+      </div>)}
     </div>
   )
 }

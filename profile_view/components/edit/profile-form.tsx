@@ -10,8 +10,9 @@ import { ja } from "date-fns/locale"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import axios from 'axios'
-
+import { DelimitedTextarea } from "../DelimitedTextarea"
 import { BlockBlobClient } from "@azure/storage-blob"
+
 
 // UIコンポーネントのインポート
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -160,7 +161,7 @@ const ProfileForm: FC<Props> = ({ id }) => {
   const [skillInfo, setSkillInfo] = useState<SkillInfoOut | null>(null);
   const [privateInfo, setPrivateInfo] = useState<PrivateInfoOut | null>(null);
   const [relatedInfo, setRelatedInfo] = useState<RelatedInfoOut | null>(null);
-
+  const [isLoading, setIsLoading] = useState(true);
 
   // 画像アップロード関連のState
   const [isUploading, setIsUploading] = useState(false);
@@ -187,13 +188,41 @@ const ProfileForm: FC<Props> = ({ id }) => {
   const seminarVideos = watch("seminar_videos")
 
   useEffect(() => {
-    api.get(`/employees/${id}`).then((res) => setEmployees(res.data)).catch((err) => console.error("基本情報の取得に失敗:", err.response?.data || err));
-    api.get(`/employment_history/${id}`).then((res) => setEmploymentHistory(res.data)).catch((err) => console.error("職歴の取得に失敗:", err.response?.data || err));
-    api.get(`/project_info/${id}`).then((res) => setProjectInfo(res.data)).catch((err) => console.error("プロジェクトの取得に失敗:", err.response?.data || err));
-    api.get(`/insight_info/${id}`).then((res) => setInsightInfo(res.data)).catch((err) => console.error("知見の取得に失敗:", err.response?.data || err));
-    api.get(`/skill_info/${id}`).then((res) => setSkillInfo(res.data)).catch((err) => console.error("スキルの取得に失敗:", err.response?.data || err));
-    api.get(`/private_info/${id}`).then((res) => setPrivateInfo(res.data)).catch((err) => console.error("プライベートの取得に失敗:", err.response?.data || err));
-    api.get(`/related_info/${id}`).then((res) => setRelatedInfo(res.data)).catch((err) => console.error("関連情報の取得に失敗:", err.response?.data || err));
+    const fetchAll = async () => {
+      try {
+        const [
+          resEmployee,
+          resEmployment,
+          resProject,
+          resInsight,
+          resSkill,
+          resPrivate,
+          resRelated
+        ] = await Promise.all([
+          api.get(`/employees/${id}`),
+          api.get(`/employment_history/${id}`),
+          api.get(`/project_info/${id}`),
+          api.get(`/insight_info/${id}`),
+          api.get(`/skill_info/${id}`),
+          api.get(`/private_info/${id}`),
+          api.get(`/related_info/${id}`),
+        ]);
+
+        setEmployees(resEmployee.data);
+        setEmploymentHistory(resEmployment.data);
+        setProjectInfo(resProject.data);
+        setInsightInfo(resInsight.data);
+        setSkillInfo(resSkill.data);
+        setPrivateInfo(resPrivate.data);
+        setRelatedInfo(resRelated.data);
+      } catch (err: any) {
+        console.error("データ取得に失敗:", err.response?.data || err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAll();
   }, [id]);
 
   useEffect(() => {
@@ -227,6 +256,8 @@ const ProfileForm: FC<Props> = ({ id }) => {
       return;
     }
     setSelectedFile(file);
+    setResetImage(false)
+    console.log(resetImage)
   }
 
   const uploadImageAndGetUrl = async (file: File): Promise<string | null> => {
@@ -239,7 +270,7 @@ const ProfileForm: FC<Props> = ({ id }) => {
       if (!sasUrl || !storageUrl) throw new Error("SASトークンの取得に失敗しました。");
       const blobClient = new BlockBlobClient(sasUrl);
       await blobClient.uploadData(file, { blobHTTPHeaders: { blobContentType: file.type } });
-      setResetImage(true);
+      setResetImage(false);
       return storageUrl;
     } catch (error) {
       console.error("アップロードエラー:", error);
@@ -333,7 +364,6 @@ const ProfileForm: FC<Props> = ({ id }) => {
 
     if (resetImage) {
       api.put(`/reset_image/${id}`);
-      setResetImage(false)
     }
 
     try {
@@ -382,10 +412,10 @@ const ProfileForm: FC<Props> = ({ id }) => {
       <h1 className="text-3xl font-bold mb-6 text-center">プロフィール登録</h1>
         <div className = "flex gap-10 py-8 justify-end mr-4">
           <div className="text-sm text-right p-0 m-0 md:text-base">
-            {employees && ( <button className="bg-gray-500 text-white rounded-full py-1.5 px-6 outline-none" onClick={() => goTOView(employees.id)}>閲覧画面に戻る</button> )}
+            {employees && ( <button className="bg-gray-500 text-white rounded-full py-1.5 px-6 outline-none" onClick={() => goTOView(employees.id)} disabled={form.formState.isSubmitting}>閲覧画面に戻る</button> )}
           </div>
           <div className="text-sm text-right p-0 m-0 md:text-base">
-            <button className = "bg-gray-500 text-white rounded-full py-1.5 px-6 outline-none" onClick = {goTOList}>一覧に戻る</button>
+            <button className = "bg-gray-500 text-white rounded-full py-1.5 px-6 outline-none" onClick = {goTOList} disabled={form.formState.isSubmitting}>一覧に戻る</button>
           </div>
         </div>
 
@@ -423,7 +453,7 @@ const ProfileForm: FC<Props> = ({ id }) => {
                               type="button"
                               variant="outline"
                               onClick={handleUploadButtonClick}
-                              disabled={form.formState.isSubmitting}
+                              disabled={form.formState.isSubmitting || isLoading}
                             >
                               <Upload className="mr-2 h-4 w-4" />
                               写真を選択
@@ -435,6 +465,7 @@ const ProfileForm: FC<Props> = ({ id }) => {
                                 type="button"
                                 variant="outline"
                                 onClick={handleResetImage}
+                                disabled={isLoading}
                               >
                                 <Trash className="mr-2 h-4 w-4"/>
                                 選択した写真をリセット
@@ -447,25 +478,25 @@ const ProfileForm: FC<Props> = ({ id }) => {
                       <h2 className="text-xl font-semibold">基本情報</h2>
                       <div className="grid grid-cols-1 gap-4 px-1">
                         <FormField control={form.control} name="employee_id" render={({ field }) => ( <FormItem><FormLabel>社員番号</FormLabel><FormControl>{employees && <Input {...field} value={employees.employee_id} readOnly />}</FormControl><FormMessage /></FormItem> )} />
-                        <FormField control={form.control} name="name" render={({ field }) => ( <FormItem><FormLabel>氏名</FormLabel><FormControl><Input placeholder={employees?.name ?? "氏名を入力"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-                        <FormField control={form.control} name="kana" render={({ field }) => ( <FormItem><FormLabel>フリガナ</FormLabel><FormControl><Input placeholder={employees?.kana ?? "フリガナを記入"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="name" render={({ field }) => ( <FormItem><FormLabel>氏名</FormLabel><FormControl><Input readOnly={isLoading} placeholder={employees?.name ?? "氏名を入力"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="kana" render={({ field }) => ( <FormItem><FormLabel>フリガナ</FormLabel><FormControl><Input readOnly={isLoading}  placeholder={employees?.kana ?? "フリガナを記入"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
                       </div>
 
                       <div className="grid grid-cols-1 gap-4">
-                        <FormField control={form.control} name="birthdate" render={({ field }) => ( <FormItem className="flex flex-col px-1"><FormLabel>生年月日</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={`w-full pl-3 text-left font-normal ${!field.value ? "text-muted-foreground" : ""}`}>{field.value ? format(field.value, "yyyy-MM-dd", { locale: ja }) : employees?.birthdate ? format(new Date(employees.birthdate), "yyyy-MM-dd", { locale: ja }) : "誕生日を選択"}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus captionLayout="dropdown" fromYear={1900} toYear={new Date().getFullYear()} classNames={{ caption_label: "hidden", caption_dropdowns: "flex gap-2 justify-center", dropdown: "border px-2 py-1 rounded-md text-sm", dropdown_year: "bg-white", dropdown_month: "bg-white", }} /></PopoverContent></Popover><FormMessage /></FormItem> )} />
-                        <FormField control={form.control} name="hometown" render={({ field }) => ( <FormItem className="px-1"><FormLabel>出身地</FormLabel><FormControl><Input placeholder={employees?.hometown ?? "出身地を入力"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="birthdate" render={({ field }) => ( <FormItem className="flex flex-col px-1"><FormLabel>生年月日</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button disabled={isLoading} variant={"outline"} className={`w-full pl-3 text-left font-normal ${!field.value ? "text-muted-foreground" : ""}`}>{field.value ? format(field.value, "yyyy-MM-dd", { locale: ja }) : employees?.birthdate ? format(new Date(employees.birthdate), "yyyy-MM-dd", { locale: ja }) : "誕生日を選択"}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value ?? undefined} onSelect={field.onChange} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus captionLayout="dropdown" fromYear={1900} toYear={new Date().getFullYear()} classNames={{ caption_label: "hidden", caption_dropdowns: "flex gap-2 justify-center", dropdown: "border px-2 py-1 rounded-md text-sm", dropdown_year: "bg-white", dropdown_month: "bg-white", }} /></PopoverContent></Popover><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="hometown" render={({ field }) => ( <FormItem className="px-1"><FormLabel>出身地</FormLabel><FormControl><Input readOnly={isLoading} placeholder={employees?.hometown ?? "出身地を入力"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
                       </div>
 
                       <Separator className="my-6" />
 
                       <h2 className="text-xl font-semibold">学歴</h2>
-                      <FormField control={form.control} name="elementary_school" render={({ field }) => ( <FormItem className="px-1"><FormLabel>小学校</FormLabel><FormControl><Input placeholder={employees?.elementary_school ?? "小学校名を入力"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-                      <FormField control={form.control} name="junior_high_school" render={({ field }) => ( <FormItem className="px-1"><FormLabel>中学校</FormLabel><FormControl><Input placeholder={employees?.junior_high_school ?? "中学校名を入力"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-                      <FormField control={form.control} name="high_school" render={({ field }) => ( <FormItem className="px-1"><FormLabel>高校</FormLabel><FormControl><Input placeholder={employees?.high_school ?? "高校名を入力"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-                      <FormField control={form.control} name="university" render={({ field }) => ( <FormItem className="px-1"><FormLabel>大学</FormLabel><FormControl><Input placeholder={employees?.university ?? "大学名を入力"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-                      <FormField control={form.control} name="faculty" render={({ field }) => ( <FormItem className="px-1"><FormLabel>学部学科</FormLabel><FormControl><Input placeholder={employees?.faculty ?? "大学における所属学部及び学科を入力"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-                      <FormField control={form.control} name="graduate_school" render={({ field }) => ( <FormItem className="px-1"><FormLabel>大学院</FormLabel><FormControl><Input placeholder={employees?.graduate_school ?? "大学院名を入力"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-                      <FormField control={form.control} name="major" render={({ field }) => ( <FormItem className="px-1"><FormLabel>専攻</FormLabel><FormControl><Input placeholder={employees?.major ?? "大学院における専攻を入力"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                      <FormField control={form.control} name="elementary_school" render={({ field }) => ( <FormItem className="px-1"><FormLabel>小学校</FormLabel><FormControl><Input readOnly={isLoading} placeholder={employees?.elementary_school ?? "小学校名を入力"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                      <FormField control={form.control} name="junior_high_school" render={({ field }) => ( <FormItem className="px-1"><FormLabel>中学校</FormLabel><FormControl><Input readOnly={isLoading} placeholder={employees?.junior_high_school ?? "中学校名を入力"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                      <FormField control={form.control} name="high_school" render={({ field }) => ( <FormItem className="px-1"><FormLabel>高校</FormLabel><FormControl><Input readOnly={isLoading} placeholder={employees?.high_school ?? "高校名を入力"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                      <FormField control={form.control} name="university" render={({ field }) => ( <FormItem className="px-1"><FormLabel>大学</FormLabel><FormControl><Input readOnly={isLoading} placeholder={employees?.university ?? "大学名を入力"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                      <FormField control={form.control} name="faculty" render={({ field }) => ( <FormItem className="px-1"><FormLabel>学部学科</FormLabel><FormControl><Input readOnly={isLoading} placeholder={employees?.faculty ?? "大学における所属学部及び学科を入力"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                      <FormField control={form.control} name="graduate_school" render={({ field }) => ( <FormItem className="px-1"><FormLabel>大学院</FormLabel><FormControl><Input readOnly={isLoading} placeholder={employees?.graduate_school ?? "大学院名を入力"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                      <FormField control={form.control} name="major" render={({ field }) => ( <FormItem className="px-1"><FormLabel>専攻</FormLabel><FormControl><Input readOnly={isLoading} placeholder={employees?.major ?? "大学院における専攻を入力"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
 
                       <Separator className="my-6" />
 
@@ -473,18 +504,18 @@ const ProfileForm: FC<Props> = ({ id }) => {
                       <div className="space-y-6">
                         {(workHistory ?? []).map((work, index) => (
                           <div key={index} className="bg-slate-50 p-4 rounded-lg relative">
-                            <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2" onClick={() => removeWorkHistory(index)}><X className="h-4 w-4" /></Button>
-                            <div className="mb-4"><FormField control={form.control} name={`employment_history.${index}.company_name`} render={({ field }) => ( <FormItem><FormLabel>会社名</FormLabel><FormControl><Input placeholder="会社名を入力 / 記入例 : 株式会社〇〇" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} /></div>
+                            <Button disabled={isLoading} type="button" variant="ghost" size="icon" className="absolute top-2 right-2" onClick={() => removeWorkHistory(index)}><X className="h-4 w-4" /></Button>
+                            <div className="mb-4"><FormField control={form.control} name={`employment_history.${index}.company_name`} render={({ field }) => ( <FormItem><FormLabel>会社名</FormLabel><FormControl><Input readOnly={isLoading} placeholder="会社名を入力 / 記入例 : 株式会社〇〇" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} /></div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                              <FormField control={form.control} name={`employment_history.${index}.start_date`} render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>開始日</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={`w-full pl-3 text-left font-normal ${!field.value ? "text-muted-foreground" : ""}`}>{field.value ? field.value : <span>開始日を選択</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value ? new Date(field.value) : undefined} onSelect={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : undefined)} initialFocus captionLayout="dropdown" fromYear={1900} toYear={new Date().getFullYear()} classNames={{caption_label: "hidden",caption_dropdowns: "flex gap-2 justify-center",dropdown: "border px-2 py-1 rounded-md text-sm",dropdown_year: "bg-white",dropdown_month: "bg-white"}}/></PopoverContent></Popover><FormMessage /></FormItem> )} />
-                              <FormField control={form.control} name={`employment_history.${index}.end_date`} render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>終了日</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={`w-full pl-3 text-left font-normal ${!field.value ? "text-muted-foreground" : ""}`}>{field.value ? field.value : <span>終了日を選択</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value ? new Date(field.value) : undefined} onSelect={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : undefined)} initialFocus captionLayout="dropdown" fromYear={1900} toYear={new Date().getFullYear()} classNames={{caption_label: "hidden",caption_dropdowns: "flex gap-2 justify-center",dropdown: "border px-2 py-1 rounded-md text-sm",dropdown_year: "bg-white",dropdown_month: "bg-white"}}/></PopoverContent></Popover><FormMessage /></FormItem> )} />
+                              <FormField control={form.control} name={`employment_history.${index}.start_date`} render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>開始日</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button disabled={isLoading} variant={"outline"} className={`w-full pl-3 text-left font-normal ${!field.value ? "text-muted-foreground" : ""}`}>{field.value ? field.value : <span>開始日を選択</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value ? new Date(field.value) : undefined} onSelect={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : undefined)} initialFocus captionLayout="dropdown" fromYear={1900} toYear={new Date().getFullYear()} classNames={{caption_label: "hidden",caption_dropdowns: "flex gap-2 justify-center",dropdown: "border px-2 py-1 rounded-md text-sm",dropdown_year: "bg-white",dropdown_month: "bg-white"}}/></PopoverContent></Popover><FormMessage /></FormItem> )} />
+                              <FormField control={form.control} name={`employment_history.${index}.end_date`} render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>終了日</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button disabled={isLoading} variant={"outline"} className={`w-full pl-3 text-left font-normal ${!field.value ? "text-muted-foreground" : ""}`}>{field.value ? field.value : <span>終了日を選択</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value ? new Date(field.value) : undefined} onSelect={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : undefined)} initialFocus captionLayout="dropdown" fromYear={1900} toYear={new Date().getFullYear()} classNames={{caption_label: "hidden",caption_dropdowns: "flex gap-2 justify-center",dropdown: "border px-2 py-1 rounded-md text-sm",dropdown_year: "bg-white",dropdown_month: "bg-white"}}/></PopoverContent></Popover><FormMessage /></FormItem> )} />
                             </div>
-                            <FormField control={form.control} name={`employment_history.${index}.job_title`} render={({ field }) => ( <FormItem className="mb-4"><FormLabel>職種</FormLabel><FormControl><Input placeholder="職種名を入力 / 記入例 : バックエンドエンジニア" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-                            <FormField control={form.control} name={`employment_history.${index}.description`} render={({ field }) => ( <FormItem className="mb-4"><FormLabel>業務内容</FormLabel><FormControl><Textarea placeholder="業務内容を入力 / 記入例 : 社内システムの作成" {...field} rows={3} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-                            <FormField control={form.control} name={`employment_history.${index}.knowledge`} render={({ field }) => (<FormItem><FormLabel>獲得した知見</FormLabel><FormControl><Input placeholder="獲得知見のタイトルを入力 / 記入例 : データベース接続 / Azureの使用" {...field} value={field.value ?? ""} onChange={(e) => { const v = e.target.value; if (v.includes(",") && !window.__commaAlertShown) { alert("カンマ（,）は自動的にスラッシュ（/）へ変換されます。"); window.__commaAlertShown = true; } field.onChange(v.replace(/,/g, "/")); }} /></FormControl><FormMessage /></FormItem>)}/>
+                            <FormField control={form.control} name={`employment_history.${index}.job_title`} render={({ field }) => ( <FormItem className="mb-4"><FormLabel>職種</FormLabel><FormControl><Input  readOnly={isLoading}placeholder="職種名を入力 / 記入例 : バックエンドエンジニア" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                            <FormField control={form.control} name={`employment_history.${index}.description`} render={({ field }) => ( <FormItem className="mb-4"><FormLabel>業務内容</FormLabel><FormControl><Textarea readOnly={isLoading} placeholder="業務内容を入力 / 記入例 : 社内システムの作成" {...field} rows={3} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                            <FormField control={form.control} name={`employment_history.${index}.knowledge`} render={({ field }) => (<FormItem><FormLabel>獲得した知見</FormLabel><FormControl><Input readOnly={isLoading} placeholder="獲得知見のタイトルを入力 / 記入例 : データベース接続 / Azureの使用" {...field} value={field.value ?? ""} onChange={(e) => { const v = e.target.value; if (v.includes(",") && !window.__commaAlertShown) { alert("カンマ（,）は自動的にスラッシュ（/）へ変換されます。"); window.__commaAlertShown = true; } field.onChange(v.replace(/,/g, "/")); }} /></FormControl><FormMessage /></FormItem>)}/>
                           </div>
                         ))}
-                        <Button type="button" variant="outline" className="w-full" onClick={addWorkHistory}><Plus className="mr-2 h-4 w-4" /> 職歴を追加</Button>
+                        <Button disabled={isLoading} type="button" variant="outline" className="w-full" onClick={addWorkHistory}><Plus className="mr-2 h-4 w-4" /> 職歴を追加</Button>
                       </div>
                     </div>
                   </TabsContent>
@@ -496,8 +527,8 @@ const ProfileForm: FC<Props> = ({ id }) => {
                         <div className="flex flex-wrap gap-2 mb-4">
                           {(skills?? []).map((item, index) => (
                             <div key={index} >
-                              <Button type="button" variant="ghost" size="icon" className="h-4 w-4 ml-1" onClick={() => removeSkill(index)}><X className="h-3 w-3" /></Button>
-                              <FormField control={form.control} name={`skill_info.${index}.skill`} render={({ field }) => ( <FormItem className="mb-4"><FormLabel>タイトル</FormLabel><FormControl><Input placeholder="スキル名を入力 / 記入例 : React" {...field} value={field.value ?? ""} className = "placeholder:text-[11px]"/></FormControl><FormMessage /></FormItem> )} />
+                              <Button disabled={isLoading} type="button" variant="ghost" size="icon" className="h-4 w-4 ml-1" onClick={() => removeSkill(index)}><X className="h-3 w-3" /></Button>
+                              <FormField control={form.control} name={`skill_info.${index}.skill`} render={({ field }) => ( <FormItem className="mb-4"><FormLabel>タイトル</FormLabel><FormControl><Input readOnly={isLoading} placeholder="スキル名を入力 / 記入例 : React" {...field} value={field.value ?? ""} className = "placeholder:text-[11px]"/></FormControl><FormMessage /></FormItem> )} />
                             </div>
                           ))}
                         </div>
@@ -510,13 +541,13 @@ const ProfileForm: FC<Props> = ({ id }) => {
                       <div className="space-y-4">
                         {(knowledge?? []).map((item, index) => (
                           <div key={index} className="bg-slate-50 p-4 rounded-lg relative">
-                            <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2" onClick={() => removeKnowledge(index)}><X className="h-4 w-4" /></Button>
-                            <FormField control={form.control} name={`insight_info.${index}.insight`} render={({ field }) => ( <FormItem className="mb-4"><FormLabel>タイトル</FormLabel><FormControl><Input placeholder="獲得知見のタイトルを入力 / 記入例 : データベース接続" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-                            <FormField control={form.control} name={`insight_info.${index}.comment`} render={({ field }) => ( <FormItem className="mb-4"><FormLabel>補足</FormLabel><FormControl><Textarea placeholder="獲得知見に関する補足的情報を入力" {...field} rows={3} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-                            <FormField control={form.control} name={`insight_info.${index}.skill`} render={({ field }) => (<FormItem><FormLabel>関連スキル</FormLabel><FormControl><Input placeholder="獲得スキルを入力 / 記入例:スキル1,スキル2" {...field} value={field.value ?? ""} onChange={(e) => { const original = e.target.value; const replaced = original.replace(/[・\/、\-\\\s\u3000]/g, ","); if (original !== replaced && !window.__delimiterAlertShown) { alert("他の区切り文字（スペース スラッシュ バックスラッシュ 読点 中点 ハイフン 等）はカンマ（,）に自動変換されます。"); window.__delimiterAlertShown = true; } field.onChange(replaced); }} /></FormControl><FormMessage /></FormItem>)}/>
+                            <Button disabled={isLoading}  type="button" variant="ghost" size="icon" className="absolute top-2 right-2" onClick={() => removeKnowledge(index)}><X className="h-4 w-4" /></Button>
+                            <FormField control={form.control} name={`insight_info.${index}.insight`} render={({ field }) => ( <FormItem className="mb-4"><FormLabel>タイトル</FormLabel><FormControl><Input readOnly={isLoading} placeholder="獲得知見のタイトルを入力 / 記入例 : データベース接続" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                            <FormField control={form.control} name={`insight_info.${index}.comment`} render={({ field }) => ( <FormItem className="mb-4"><FormLabel>補足</FormLabel><FormControl><Textarea readOnly={isLoading} placeholder="獲得知見に関する補足的情報を入力" {...field} rows={3} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                            <FormField control={form.control} name={`insight_info.${index}.skill`} render={({ field }) => (<FormItem><FormLabel>関連スキル</FormLabel><FormControl><Input readOnly={isLoading} placeholder="獲得スキルを入力 / 記入例:スキル1,スキル2" {...field} value={field.value ?? ""} onChange={(e) => { const original = e.target.value; const replaced = original.replace(/[・\/、\-\\\s\u3000]/g, ","); if (original !== replaced && !window.__delimiterAlertShown) { alert("他の区切り文字（スペース スラッシュ バックスラッシュ 読点 中点 ハイフン 等）はカンマ（,）に自動変換されます。"); window.__delimiterAlertShown = true; } field.onChange(replaced); }} /></FormControl><FormMessage /></FormItem>)}/>
                           </div>
                         ))}
-                        <Button type="button" variant="outline" className="w-full" onClick={addKnowledge}><Plus className="mr-2 h-4 w-4" /> 知見を追加</Button>
+                        <Button disabled={isLoading} type="button" variant="outline" className="w-full" onClick={addKnowledge}><Plus className="mr-2 h-4 w-4" /> 知見を追加</Button>
                       </div>
 
                       <Separator className="my-6" />
@@ -525,17 +556,17 @@ const ProfileForm: FC<Props> = ({ id }) => {
                       <div className="space-y-4">
                         {(projects ?? []).map((_, index) => (
                           <div key={index} className="bg-slate-50 p-4 rounded-lg relative">
-                            <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2" onClick={() => removeProject(index)}><X className="h-4 w-4" /></Button>
-                            <div className="mb-4"><FormField control={form.control} name={`project_info.${index}.project`} render={({ field }) => ( <FormItem><FormLabel>プロジェクト名</FormLabel><FormControl><Input placeholder="プロジェクト名を入力 / 記入例 : 人材管理システムリニューアル" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} /></div>
+                            <Button disabled={isLoading} type="button" variant="ghost" size="icon" className="absolute top-2 right-2" onClick={() => removeProject(index)}><X className="h-4 w-4" /></Button>
+                            <div className="mb-4"><FormField control={form.control} name={`project_info.${index}.project`} render={({ field }) => ( <FormItem><FormLabel>プロジェクト名</FormLabel><FormControl><Input readOnly={isLoading} placeholder="プロジェクト名を入力 / 記入例 : 人材管理システムリニューアル" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} /></div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                              <FormField control={form.control} name={`project_info.${index}.start_date`} render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>開始日</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={`w-full pl-3 text-left font-normal ${!field.value ? "text-muted-foreground" : ""}`}>{field.value ? field.value : <span>開始日を選択</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value ? new Date(field.value) : undefined} onSelect={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : undefined)} initialFocus captionLayout="dropdown" fromYear={1900} toYear={new Date().getFullYear()} classNames={{caption_label: "hidden",caption_dropdowns: "flex gap-2 justify-center",dropdown: "border px-2 py-1 rounded-md text-sm",dropdown_year: "bg-white",dropdown_month: "bg-white"}}/></PopoverContent></Popover><FormMessage /></FormItem> )} />
-                              <FormField control={form.control} name={`project_info.${index}.end_date`} render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>終了日</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button variant={"outline"} className={`w-full pl-3 text-left font-normal ${!field.value ? "text-muted-foreground" : ""}`}>{field.value ? field.value : <span>終了日を選択</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value ? new Date(field.value) : undefined} onSelect={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : undefined)} initialFocus captionLayout="dropdown" fromYear={1900} toYear={new Date().getFullYear()} classNames={{caption_label: "hidden",caption_dropdowns: "flex gap-2 justify-center",dropdown: "border px-2 py-1 rounded-md text-sm",dropdown_year: "bg-white",dropdown_month: "bg-white"}}/></PopoverContent></Popover><FormMessage /></FormItem> )} />
+                              <FormField control={form.control} name={`project_info.${index}.start_date`} render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>開始日</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button disabled={isLoading} variant={"outline"} className={`w-full pl-3 text-left font-normal ${!field.value ? "text-muted-foreground" : ""}`}>{field.value ? field.value : <span>開始日を選択</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value ? new Date(field.value) : undefined} onSelect={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : undefined)} initialFocus captionLayout="dropdown" fromYear={1900} toYear={new Date().getFullYear()} classNames={{caption_label: "hidden",caption_dropdowns: "flex gap-2 justify-center",dropdown: "border px-2 py-1 rounded-md text-sm",dropdown_year: "bg-white",dropdown_month: "bg-white"}}/></PopoverContent></Popover><FormMessage /></FormItem> )} />
+                              <FormField control={form.control} name={`project_info.${index}.end_date`} render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>終了日</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button disabled={isLoading} variant={"outline"} className={`w-full pl-3 text-left font-normal ${!field.value ? "text-muted-foreground" : ""}`}>{field.value ? field.value : <span>終了日を選択</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value ? new Date(field.value) : undefined} onSelect={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : undefined)} initialFocus captionLayout="dropdown" fromYear={1900} toYear={new Date().getFullYear()} classNames={{caption_label: "hidden",caption_dropdowns: "flex gap-2 justify-center",dropdown: "border px-2 py-1 rounded-md text-sm",dropdown_year: "bg-white",dropdown_month: "bg-white"}}/></PopoverContent></Popover><FormMessage /></FormItem> )} />
                             </div>
-                            <FormField control={form.control} name={`project_info.${index}.comment`} render={({ field }) => ( <FormItem className="mb-4"><FormLabel>補足</FormLabel><FormControl><Textarea placeholder="プロジェクトに関する補足的情報を記入" {...field} rows={3} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-                            <FormField control={form.control} name={`project_info.${index}.skill`} render={({ field }) => (<FormItem><FormLabel>獲得スキル</FormLabel><FormControl><Input placeholder="獲得スキルを記入 / 記入例 : スキル1,スキル2" {...field} value={field.value ?? ""} onChange={(e) => { const original = e.target.value; const replaced = original.replace(/[・\/、\-\\\s\u3000]/g, ","); if (original !== replaced && !window.__delimiterAlertShown) { alert("他の区切り文字（スペース スラッシュ バックスラッシュ 読点 中点 ハイフン 等）はカンマ（,）に自動変換されます。"); window.__delimiterAlertShown = true; } field.onChange(replaced); }} /></FormControl><FormMessage /></FormItem>)}/>
+                            <FormField control={form.control} name={`project_info.${index}.comment`} render={({ field }) => ( <FormItem className="mb-4"><FormLabel>補足</FormLabel><FormControl><Textarea readOnly={isLoading} placeholder="プロジェクトに関する補足的情報を記入" {...field} rows={3} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                            <FormField control={form.control} name={`project_info.${index}.skill`} render={({ field }) => (<FormItem><FormLabel>獲得スキル</FormLabel><FormControl><Input readOnly={isLoading} placeholder="獲得スキルを記入 / 記入例 : スキル1,スキル2" {...field} value={field.value ?? ""} onChange={(e) => { const original = e.target.value; const replaced = original.replace(/[・\/、\-\\\s\u3000]/g, ","); if (original !== replaced && !window.__delimiterAlertShown) { alert("他の区切り文字（スペース スラッシュ バックスラッシュ 読点 中点 ハイフン 等）はカンマ（,）に自動変換されます。"); window.__delimiterAlertShown = true; } field.onChange(replaced); }} /></FormControl><FormMessage /></FormItem>)}/>
                           </div>
                         ))}
-                        <Button type="button" variant="outline" className="w-full" onClick={addProject}><Plus className="mr-2 h-4 w-4" /> プロジェクトを追加</Button>
+                        <Button disabled={isLoading} type="button" variant="outline" className="w-full" onClick={addProject}><Plus className="mr-2 h-4 w-4" /> プロジェクトを追加</Button>
                       </div>
                     </div>
                   </TabsContent>
@@ -544,40 +575,40 @@ const ProfileForm: FC<Props> = ({ id }) => {
                     <div className="space-y-4">
                       <h2 className="text-xl font-semibold">家族・背景</h2>
                       <div className="grid grid-cols-1 gap-4">
-                        <FormField control={form.control} name="family_structure" render={({ field }) => ( <FormItem><FormLabel>家族構成</FormLabel><FormControl><Input placeholder={privateInfo?.family_structure ?? "家族構成を入力 / 記入例 : 父・母・本人"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="family_structure" render={({ field }) => ( <FormItem><FormLabel>家族構成</FormLabel><FormControl><Input placeholder={privateInfo?.family_structure ?? "家族構成を入力 / 記入例 : 父・母・本人"} {...field} value={field.value ?? ""} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <FormField control={form.control} name="father_job" render={({ field }) => ( <FormItem><FormLabel>父親の職業</FormLabel><FormControl><Input placeholder={privateInfo?.father_job ?? "職業名を入力"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-                          <FormField control={form.control} name="mother_job" render={({ field }) => ( <FormItem><FormLabel>母親の職業</FormLabel><FormControl><Input placeholder={privateInfo?.mother_job ?? "職業名を入力"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                          <FormField control={form.control} name="father_job" render={({ field }) => ( <FormItem><FormLabel>父親の職業</FormLabel><FormControl><Input placeholder={privateInfo?.father_job ?? "職業名を入力"} {...field} value={field.value ?? ""} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
+                          <FormField control={form.control} name="mother_job" render={({ field }) => ( <FormItem><FormLabel>母親の職業</FormLabel><FormControl><Input placeholder={privateInfo?.mother_job ?? "職業名を入力"} {...field} value={field.value ?? ""} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <FormField control={form.control} name="blood_type" render={({ field }) => ( <FormItem><FormLabel>血液型</FormLabel><FormControl><Input placeholder={privateInfo?.blood_type ?? "血液型を入力 / 記入例 : O型"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-                          <FormField control={form.control} name="nickname" render={({ field }) => ( <FormItem><FormLabel>ニックネーム</FormLabel><FormControl><Input placeholder={privateInfo?.nickname ?? "ニックネームを入力"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                          <FormField control={form.control} name="blood_type" render={({ field }) => ( <FormItem><FormLabel>血液型</FormLabel><FormControl><Input placeholder={privateInfo?.blood_type ?? "血液型を入力 / 記入例 : O型"} {...field} value={field.value ?? ""} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
+                          <FormField control={form.control} name="nickname" render={({ field }) => ( <FormItem><FormLabel>ニックネーム</FormLabel><FormControl><Input placeholder={privateInfo?.nickname ?? "ニックネームを入力"} {...field} value={field.value ?? ""} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
                         </div>
-                        <FormField control={form.control} name="mbti" render={({ field }) => ( <FormItem><FormLabel>MBTI（性格タイプ）</FormLabel><FormControl><Input placeholder={privateInfo?.mbti ?? "MBTIを入力 / 記入例 : ISTJ"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="mbti" render={({ field }) => ( <FormItem><FormLabel>MBTI（性格タイプ）</FormLabel><FormControl><Input placeholder={privateInfo?.mbti ?? "MBTIを入力 / 記入例 : ISTJ"} {...field} value={field.value ?? ""} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
                       </div>
 
                       <Separator className="my-6" />
 
                       <h2 className="text-xl font-semibold">活動歴</h2>
                       <div className="grid grid-cols-1 gap-4">
-                        <FormField control={form.control} name="lessons" render={({ field }) => ( <FormItem><FormLabel>習い事</FormLabel><FormControl><Textarea placeholder={privateInfo?.lessons ?? "習い事を入力 <カンマ区切り> / 記入例 : 水泳 (2歳～10歳), ピアノ (5歳～10歳)"} {...field} rows={2} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-                        <FormField control={form.control} name="club_activities" render={({ field }) => ( <FormItem><FormLabel>部活</FormLabel><FormControl><Textarea placeholder={privateInfo?.club_activities ?? "部活を入力 <カンマ区切り> / 記入例 : サッカー部 (中学), テニス部 (高校)"} {...field} rows={2} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-                        <FormField control={form.control} name="jobs" render={({ field }) => ( <FormItem><FormLabel>アルバイト</FormLabel><FormControl><Textarea placeholder={privateInfo?.jobs ?? "アルバイト経験を入力 <カンマ区切り> / 記入例 : カフェ店員 (大学1年時), レストランスタッフ (大学2年時)"} {...field} rows={2} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-                        <FormField control={form.control} name="circles" render={({ field }) => ( <FormItem><FormLabel>サークル</FormLabel><FormControl><Textarea placeholder={privateInfo?.circles ?? "サークル活動を入力 <カンマ区切り>"} {...field} rows={2} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="lessons" render={({ field }) => ( <FormItem><FormLabel>習い事</FormLabel><FormControl><DelimitedTextarea placeholder={privateInfo?.lessons ?? "習い事を入力 / 記入例 : 水泳 (2歳～10歳), ピアノ (5歳～10歳)"}  value={field.value ?? ""} onChange={field.onChange} rows={2} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="club_activities" render={({ field }) => ( <FormItem><FormLabel>部活</FormLabel><FormControl><DelimitedTextarea placeholder={privateInfo?.club_activities ?? "部活を入力 / 記入例 : サッカー部 (中学), テニス部 (高校)"} value={field.value ?? ""} onChange={field.onChange} rows={2} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="jobs" render={({ field }) => ( <FormItem><FormLabel>アルバイト</FormLabel><FormControl><DelimitedTextarea placeholder={privateInfo?.jobs ?? "アルバイト経験を入力/ 記入例 : カフェ店員 (大学1年時), レストランスタッフ (大学2年時)"} value={field.value ?? ""} onChange={field.onChange} rows={2} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="circles" render={({ field }) => ( <FormItem><FormLabel>サークル</FormLabel><FormControl><DelimitedTextarea placeholder={privateInfo?.circles ?? "サークル活動を入力"} value={field.value ?? ""} onChange={field.onChange} rows={2} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
                       </div>
 
                       <Separator className="my-6" />
 
                       <h2 className="text-xl font-semibold">趣味・好み</h2>
                       <div className="grid grid-cols-1 gap-4">
-                        <FormField control={form.control} name="hobbies" render={({ field }) => ( <FormItem><FormLabel>趣味</FormLabel><FormControl><Textarea placeholder={privateInfo?.hobbies ?? "趣味を入力 / 記入例 : テニス ・ カラオケ"} {...field} rows={2} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-                        <FormField control={form.control} name="favorite_foods" render={({ field }) => ( <FormItem><FormLabel>好きな食べ物</FormLabel><FormControl><Textarea placeholder={privateInfo?.favorite_foods ?? "好きな食べ物を入力 / 記入例 : 焼肉 ・ ラーメン"} {...field} rows={2} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-                        <FormField control={form.control} name="disliked_foods" render={({ field }) => ( <FormItem><FormLabel>苦手な食べ物</FormLabel><FormControl><Textarea placeholder={privateInfo?.disliked_foods ?? "嫌いな食べ物を入力 / 記入例 : ゴーヤ ・ ピーマン"} {...field} rows={2} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-                        <FormField control={form.control} name="holiday_activities" render={({ field }) => ( <FormItem><FormLabel>休日の過ごし方</FormLabel><FormControl><Textarea placeholder={privateInfo?.holiday_activities ?? "休日の過ごし方を入力 / 記入例 : 友達と外食 ・ 一人カラオケ"} {...field} rows={2} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-                        <FormField control={form.control} name="favorite_celebrities" render={({ field }) => ( <FormItem><FormLabel>好きな芸能人</FormLabel><FormControl><Textarea placeholder={privateInfo?.favorite_celebrities ?? "好きな芸能人を入力 / 記入例 : 佐藤健 ・ 新垣結衣 ・ 星野源"} {...field} rows={2} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-                        <FormField control={form.control} name="favorite_characters" render={({ field }) => ( <FormItem><FormLabel>好きなキャラクター</FormLabel><FormControl><Textarea placeholder={privateInfo?.favorite_characters ?? "好きなキャラクターを入力 / 記入例 : ドラえもん ・ スヌーピー"} {...field} rows={2} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-                        <FormField control={form.control} name="favorite_artists" render={({ field }) => ( <FormItem><FormLabel>好きなアーティスト</FormLabel><FormControl><Textarea placeholder={privateInfo?.favorite_artists ?? "好きなアーティストを入力 / 記入例 : Official髭男dism ・ あいみょん"} {...field} rows={2} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-                        <FormField control={form.control} name="favorite_comedians" render={({ field }) => ( <FormItem><FormLabel>好きな芸人</FormLabel><FormControl><Textarea placeholder={privateInfo?.favorite_comedians ?? "好きな芸人を入力 / 記入例 : サンドウィッチマン ・ 千鳥"} {...field} rows={2} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="hobbies" render={({ field }) => ( <FormItem><FormLabel>趣味</FormLabel><FormControl></FormControl><FormMessage /><DelimitedTextarea placeholder={privateInfo?.hobbies ?? "趣味を入力 / 記入例 : テニス ・ カラオケ"} value={field.value ?? ""} onChange={field.onChange} rows={2} readOnly={isLoading} /></FormItem> )} />
+                        <FormField control={form.control} name="favorite_foods" render={({ field }) => ( <FormItem><FormLabel>好きな食べ物</FormLabel><FormControl><DelimitedTextarea placeholder={privateInfo?.favorite_foods ?? "好きな食べ物を入力 / 記入例 : 焼肉 ・ ラーメン"}  value={field.value ?? ""} onChange={field.onChange} rows={2} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="disliked_foods" render={({ field }) => ( <FormItem><FormLabel>苦手な食べ物</FormLabel><FormControl><DelimitedTextarea placeholder={privateInfo?.disliked_foods ?? "嫌いな食べ物を入力 / 記入例 : ゴーヤ ・ ピーマン"} value={field.value ?? ""} onChange={field.onChange} rows={2} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="holiday_activities" render={({ field }) => ( <FormItem><FormLabel>休日の過ごし方</FormLabel><FormControl><DelimitedTextarea placeholder={privateInfo?.holiday_activities ?? "休日の過ごし方を入力 / 記入例 : 友達と外食 ・ 一人カラオケ"}  value={field.value ?? ""} onChange={field.onChange} rows={2} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="favorite_celebrities" render={({ field }) => ( <FormItem><FormLabel>好きな芸能人</FormLabel><FormControl><DelimitedTextarea placeholder={privateInfo?.favorite_celebrities ?? "好きな芸能人を入力 / 記入例 : 佐藤健 ・ 新垣結衣 ・ 星野源"}  value={field.value ?? ""} onChange={field.onChange} rows={2} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="favorite_characters" render={({ field }) => ( <FormItem><FormLabel>好きなキャラクター</FormLabel><FormControl><DelimitedTextarea placeholder={privateInfo?.favorite_characters ?? "好きなキャラクターを入力 / 記入例 : ドラえもん ・ スヌーピー"} value={field.value ?? ""} onChange={field.onChange} rows={2} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="favorite_artists" render={({ field }) => ( <FormItem><FormLabel>好きなアーティスト</FormLabel><FormControl><DelimitedTextarea placeholder={privateInfo?.favorite_artists ?? "好きなアーティストを入力 / 記入例 : Official髭男dism ・ あいみょん"} value={field.value ?? ""} onChange={field.onChange} rows={2} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="favorite_comedians" render={({ field }) => ( <FormItem><FormLabel>好きな芸人</FormLabel><FormControl><DelimitedTextarea placeholder={privateInfo?.favorite_comedians ?? "好きな芸人を入力 / 記入例 : サンドウィッチマン ・ 千鳥"}  value={field.value ?? ""} onChange={field.onChange} rows={2} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
                       </div>
                     </div>
                   </TabsContent>
@@ -587,7 +618,7 @@ const ProfileForm: FC<Props> = ({ id }) => {
                       <h2 className="text-xl font-semibold">プロフィール動画</h2>
                       <div className="bg-slate-50 p-4 rounded-lg">
                         <div className="aspect-video bg-slate-100 rounded-lg flex items-center justify-center mb-4"><div className="text-center p-6"><Upload className="h-12 w-12 mx-auto text-slate-400 mb-2" /><p className="text-slate-500">動画をアップロード</p></div></div>
-                        <FormField control={form.control} name="profile_video" render={({ field }) => ( <FormItem><FormLabel>動画URL</FormLabel><FormControl><Input placeholder="動画URLを入力 / 記入例 : https://example.com/video" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="profile_video" render={({ field }) => ( <FormItem><FormLabel>動画URL</FormLabel><FormControl><Input placeholder="動画URLを入力 / 記入例 : https://example.com/video" {...field} value={field.value ?? ""} readOnly={isLoading} /></FormControl><FormMessage /></FormItem> )} />
                       </div>
 
                       <Separator className="my-6" />
@@ -597,9 +628,9 @@ const ProfileForm: FC<Props> = ({ id }) => {
                         {(seminarVideos ?? []).map((video, index) => (
                           <div key={index} className="bg-slate-50 p-4 rounded-lg relative">
                             <div className="bg-slate-50 p-4 rounded-lg">
-                              <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2" onClick={() => removeSeminarVideo(index)}><X className="h-4 w-4" /></Button>
+                              <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2" onClick={() => removeSeminarVideo(index)}  disabled={isLoading}><X className="h-4 w-4"/></Button>
                               <div className="aspect-video bg-slate-100 rounded-lg flex items-center justify-center mb-4"><div className="text-center p-6"><Upload className="h-12 w-12 mx-auto text-slate-400 mb-2" /><p className="text-slate-500">動画をアップロード</p></div></div>
-                              <FormField control={form.control} name={`seminar_videos.${index}.seminar_videos`} render={({ field }) => ( <FormItem><FormLabel>動画URL</FormLabel><FormControl><Input placeholder="https://example.com/video" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
+                              <FormField control={form.control} name={`seminar_videos.${index}.seminar_videos`} render={({ field }) => ( <FormItem><FormLabel>動画URL</FormLabel><FormControl><Input placeholder="https://example.com/video" {...field} value={field.value ?? ""} readOnly={isLoading} /></FormControl><FormMessage /></FormItem> )} />
                             </div>
                           </div>
                         ))}
@@ -612,24 +643,29 @@ const ProfileForm: FC<Props> = ({ id }) => {
             </CardContent>
 
             <CardFooter className="flex justify-between p-6 border-t">
-              <Button type="button" variant="outline" onClick={goToPrevTab} disabled={activeTab === "basic" || form.formState.isSubmitting}>
+              <Button type="button" variant="outline" onClick={goToPrevTab} disabled={activeTab === "basic" || form.formState.isSubmitting }>
                 <ChevronLeft className="mr-2 h-4 w-4" /> 前へ
               </Button>
 
-              {activeTab !== "media" ? (
-                <Button type="button" onClick={handleNextTabClick} disabled={form.formState.isSubmitting}>
-                  次へ <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
-              ) : (
-                <Button type="submit" disabled={form.formState.isSubmitting || isUploading}>
-                  {(form.formState.isSubmitting || isUploading) ? (<Loader2 className="mr-2 h-4 w-4 animate-spin" />) : (<Save className="mr-2 h-4 w-4" />)}
-                  {(form.formState.isSubmitting || isUploading) ? "保存中..." : "保存"}
-                </Button>
-              )}
+
+                <div className= "flex gap-8">
+                  <Button type="button" onClick={handleNextTabClick} disabled={activeTab === "media" || form.formState.isSubmitting}>
+                    次へ <ChevronRight className="ml-2 h-4 w-4"/>
+                  </Button>
+                  <Button type="submit" disabled={form.formState.isSubmitting || isUploading  || isLoading}>
+                    {(form.formState.isSubmitting || isUploading) ? (<Loader2 className="mr-2 h-4 w-4 animate-spin" />) : (<Save className="mr-2 h-4 w-4" />)}
+                    {(form.formState.isSubmitting || isUploading) ? "保存中..." : "保存"}
+                  </Button>
+                </div>
+
             </CardFooter>
           </Card>
         </form>
       </Form>
+      {isLoading && (<div className="fixed bottom-4 right-4 flex items-center gap-2 px-4 py-2 bg-white text-gray-800 shadow-lg rounded-lg border z-50">
+        <Loader2 className="animate-spin w-5 h-5 text-blue-500" />
+        <span className="text-sm">データ取得中…<br/>少々お待ちください</span>
+      </div>)}
     </div>
   )
 }
