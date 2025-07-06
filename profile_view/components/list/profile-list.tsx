@@ -309,22 +309,33 @@ const addNewEmployeeToDatabase = async (emp: Employee) => {
               <div className="p-4 space-y-2">
                 <input
                   ref={(el) => {
-                    employeeIdRefs.current[employee.id] = el
+                    employeeIdRefs.current[employee.id] = el;
                   }}
                   className="w-full px-2 py-1 rounded text-sm flex items-end"
-                  placeholder="社員番号を入力"
-                  value={employee.employee_id ?? ""}
+                  placeholder="5桁の社員番号を入力"
+
+                  value={
+                    employee.readOnly
+                      ? String(employee.employee_id ?? "").padStart(5, "0")
+                      : employee.employee_id ?? ""
+                  }
                   readOnly={employee.readOnly || employee.editingStep !== "employee_id"}
+
                   onChange={(e) => {
-                  const val = e.target.value
-                 const numVal =
-                  val === "" ? null : isNaN(Number(val)) ? null : Number(val);
-                  setEmployees((prev) =>
-                    prev.map((emp) =>
-                      emp.id === employee.id ? { ...emp, employee_id: numVal } : emp
-                    )
-                  )
+                    const val = e.target.value;
+                    if (val.length > 5) {
+                      alert("社員番号は5桁以内で入力してください。");
+                      return;
+                    }
+                    const numVal =
+                      val === "" ? null : isNaN(Number(val)) ? null : Number(val);
+                    setEmployees((prev) =>
+                      prev.map((emp) =>
+                        emp.id === employee.id ? { ...emp, employee_id: numVal } : emp
+                      )
+                    );
                   }}
+
                   onKeyDown={(e) => handleKeyDown(e, employee.id)}
                   onBlur={() => handleBlur(employee.id)}
                 />

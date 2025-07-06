@@ -24,6 +24,7 @@ class EmployeeCreate(BaseModel):
 
 
 class EmployeeUpdate(BaseModel):
+    employee_id: int = None
     name: Optional[str] = None
     kana: Optional[str] = None
     birthdate: Optional[date] = None
@@ -185,6 +186,8 @@ class PrivateInfoCreate(BaseModel):
     favorite_characters: Optional[str] = None
     favorite_artists: Optional[str] = None
     favorite_comedians: Optional[str] = None
+    activities_free :Optional[str] = None
+    favorite_things_free :Optional[str] = None
 
 class PrivateInfoUpdate(BaseModel):
     blood_type: Optional[str] = None
@@ -205,6 +208,8 @@ class PrivateInfoUpdate(BaseModel):
     favorite_characters: Optional[str] = None
     favorite_artists: Optional[str] = None
     favorite_comedians: Optional[str] = None
+    activities_free :Optional[str] = None
+    favorite_things_free :Optional[str] = None
 
 class PrivateInfoOut(BaseModel):
     id: int
@@ -227,6 +232,8 @@ class PrivateInfoOut(BaseModel):
     favorite_characters: Optional[str] = None
     favorite_artists: Optional[str] = None
     favorite_comedians: Optional[str] = None
+    activities_free :Optional[str] = None
+    favorite_things_free :Optional[str] = None
     class Config:
         orm_mode = True
 

@@ -79,15 +79,15 @@ class PrivateInfo(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     employee_id = Column(Integer, unique=True, nullable=False)
-    blood_type = Column(Unicode(2))
+    blood_type = Column(Unicode(50))
     nickname = Column(Unicode(100))
-    mbti = Column(Unicode(4))
+    mbti = Column(Unicode(50))
     family_structure = Column(Unicode(100))
     father_job = Column(Unicode(100))
     mother_job = Column(Unicode(100))
-    lessons = Column(Unicode(100))
+    lessons = Column(Unicode(500))
     club_activities = Column(Unicode(100))
-    jobs = Column(Unicode(100))
+    jobs = Column(Unicode(500))
     circles = Column(Unicode(100))
     hobbies = Column(Unicode(100))
     favorite_foods = Column(Unicode(100))
@@ -97,6 +97,8 @@ class PrivateInfo(Base):
     favorite_characters = Column(Unicode(100))
     favorite_artists = Column(Unicode(100))
     favorite_comedians = Column(Unicode(100))
+    activities_free = Column(Unicode(500))
+    favorite_things_free = Column(Unicode(500))
 
 
 

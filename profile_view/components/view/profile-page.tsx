@@ -42,7 +42,8 @@ import {
   Puzzle,
   Carrot,
   LinkIcon,
-  Loader2
+  Loader2,
+  History
 } from "lucide-react"
 
 
@@ -534,7 +535,7 @@ const ProfilePage: FC<Props> = ({ id }) => {
                     </div>
 
                     <h2 className="text-2xl font-bold mt-8 mb-4 flex items-center gap-2">
-                      <Music className="h-6 w-6" />
+                      <History className="h-6 w-6" />
                       活動歴
                     </h2>
 
@@ -578,6 +579,15 @@ const ProfilePage: FC<Props> = ({ id }) => {
                               ))}
                           </div>
                         </div>
+                        {privateInfo?.activities_free && (
+                          <div className="flex items-start gap-3">
+                            <History className="h-5 w-5 text-slate-500 mt-0.5" />
+                            <div>
+                              <p className="text-sm text-slate-500">その他の活動(自由記述)</p>
+                              <p className="font-medium">{privateInfo?.activities_free}</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                   </div>
 
@@ -663,6 +673,15 @@ const ProfilePage: FC<Props> = ({ id }) => {
                             ))}
                         </div>
                       </div>
+                      {privateInfo?.favorite_things_free && (
+                        <div className="flex items-start gap-3">
+                          <Heart className="h-5 w-5 text-slate-500 mt-0.5" />
+                          <div>
+                            <p className="text-sm text-slate-500">その他の好きなもの・こと（自由記述）</p>
+                            <p className="font-medium">{privateInfo?.favorite_things_free}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

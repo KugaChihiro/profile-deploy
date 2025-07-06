@@ -15,10 +15,10 @@ export const DelimitedTextarea: React.FC<DelimitedTextareaProps> = ({
 }) => {
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const original = e.target.value;
-    const replaced = original.replace(/[・\/、\-\\\s\u3000]/g, ",");
+    const replaced = original.replace(/[・\/、\-\\]/g, ",");
 
     if (original !== replaced && !window.__delimiterAlertShown) {
-      alert("他の区切り文字（スペース / バックスラッシュ ・ 、 - 等）はカンマ（,）に自動変換されます。");
+      alert("他の区切り文字（バックスラッシュ ・ 、 - 等）はカンマ（,）に自動変換されます。");
       window.__delimiterAlertShown = true;
     }
 

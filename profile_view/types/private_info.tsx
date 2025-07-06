@@ -18,6 +18,8 @@ export type PrivateInfoBase = {
   favorite_characters?: string | null;
   favorite_artists?: string | null;
   favorite_comedians?: string | null;
+  activities_free ?: string | null;
+  favorite_things_free?: string | null;
 };
 
 // 登録時（POST）

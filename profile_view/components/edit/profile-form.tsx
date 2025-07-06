@@ -65,7 +65,13 @@ declare global {
 
 // フォームのスキーマ定義
 const formSchema = z.object({
-  employee_id: z.number().optional().nullable(),
+  employee_id: z.string().or(z.number()).optional().nullable()
+    .transform((val) => {
+      if (val === '' || val == null) {
+        return null;
+      }
+      return Number(val);
+    }),
   name: z.string().optional().nullable(),
   kana: z.string().optional().nullable(),
   birthdate: z.date().optional().nullable(),
@@ -135,6 +141,8 @@ const formSchema = z.object({
   favorite_characters: z.string().optional().nullable(),
   favorite_artists: z.string().optional().nullable(),
   favorite_comedians: z.string().optional().nullable(),
+  activities_free : z.string().optional().nullable(),
+  favorite_things_free : z.string().optional().nullable(),
   profile_video: z.string().optional().nullable(),
   seminar_videos: z
     .array(
@@ -163,6 +171,7 @@ const ProfileForm: FC<Props> = ({ id }) => {
   const [relatedInfo, setRelatedInfo] = useState<RelatedInfoOut | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [isEmployeeIdFocused, setIsEmployeeIdFocused] = useState(false);
   // 画像アップロード関連のState
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null) ;
@@ -176,7 +185,7 @@ const ProfileForm: FC<Props> = ({ id }) => {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "", kana: "", birthdate: undefined, hometown: "", elementary_school: "", junior_high_school: "", high_school: "", university: "", faculty: "", graduate_school: "", major: "", photo_url: "", blood_type: "", nickname: "", mbti: "", family_structure: "", father_job: "", mother_job: "", lessons: "", club_activities: "", jobs: "", circles: "", hobbies: "", favorite_foods: "", disliked_foods: "", holiday_activities: "", favorite_celebrities: "", favorite_characters: "", favorite_artists: "", favorite_comedians: "", profile_video: "", employment_history: [], project_info: [], insight_info: [], skill_info: [], seminar_videos: [],
+      name: "", kana: "", birthdate: undefined, hometown: "", elementary_school: "", junior_high_school: "", high_school: "", university: "", faculty: "", graduate_school: "", major: "", photo_url: "", blood_type: "", nickname: "", mbti: "", family_structure: "", father_job: "", mother_job: "", lessons: "", club_activities: "", jobs: "", circles: "", hobbies: "", favorite_foods: "", disliked_foods: "", holiday_activities: "", favorite_celebrities: "", favorite_characters: "", favorite_artists: "", favorite_comedians: "", activities_free: "", favorite_things_free: "", profile_video: "", employment_history: [], project_info: [], insight_info: [], skill_info: [], seminar_videos: [],
     },
   })
 
@@ -235,9 +244,9 @@ const ProfileForm: FC<Props> = ({ id }) => {
         birthdate: employees.birthdate ? new Date(employees.birthdate) : undefined,
         ...privateInfo,
         ...relatedInfo,
-        employment_history: employmentHistory.company_name?.split(',').map((name, index) => ({ company_name: name, job_title: employmentHistory.job_title?.split(',')[index] ?? null, start_date: employmentHistory.start_date?.split(',')[index] ?? null, end_date: employmentHistory.end_date?.split(',')[index] ?? null, description: employmentHistory.description?.split(',')[index] ?? null, knowledge: employmentHistory.knowledge?.split('\\,')[index]?.replace(/\\/g, ',') ?? null, })).filter(item => item.company_name) ?? [],
-        project_info: projectInfo.project?.split(',').map((proj, index) => ({ project: proj, comment: projectInfo.comment?.split(',')[index] ?? null, skill: projectInfo.skill?.split('\\,')[index]?.replace(/\\/g, ',') ?? null, start_date: projectInfo.start_date?.split(',')[index] ?? null, end_date: projectInfo.end_date?.split(',')[index] ?? null, })).filter(item => item.project) ?? [],
-        insight_info: insightInfo.insight?.split(',').map((ins, index) => ({ insight: ins, comment: insightInfo.comment?.split(',')[index] ?? null, skill: insightInfo.skill?.split('\\,')[index]?.replace(/\\/g, ',') ?? null, })).filter(item => item.insight) ?? [],
+        employment_history: employmentHistory.company_name?.split(',').map((name, index) => ({ company_name: name, job_title: employmentHistory.job_title?.split(',')[index] ?? null, start_date: employmentHistory.start_date?.split(',')[index] ?? null, end_date: employmentHistory.end_date?.split(',')[index] ?? null, description: employmentHistory.description?.split(',')[index] ?? null, knowledge: employmentHistory.knowledge?.split(',')[index]?.replace(/\\/g, ',') ?? null, })).filter(item => item.company_name) ?? [],
+        project_info: projectInfo.project?.split(',').map((proj, index) => ({ project: proj, comment: projectInfo.comment?.split(',')[index] ?? null, skill: projectInfo.skill?.split(',')[index]?.replace(/\\/g, ',') ?? null, start_date: projectInfo.start_date?.split(',')[index] ?? null, end_date: projectInfo.end_date?.split(',')[index] ?? null, })).filter(item => item.project) ?? [],
+        insight_info: insightInfo.insight?.split(',').map((ins, index) => ({ insight: ins, comment: insightInfo.comment?.split(',')[index] ?? null, skill: insightInfo.skill?.split(',')[index]?.replace(/\\/g, ',') ?? null, })).filter(item => item.insight) ?? [],
         skill_info: skillInfo.skill?.split(',').map(s => ({ skill: s })).filter(item => item.skill) ?? [],
         seminar_videos: relatedInfo.seminar_videos?.split(',').map(s => ({ seminar_videos: s.trim() })).filter(item => item.seminar_videos) ?? [],
       };
@@ -306,10 +315,9 @@ const ProfileForm: FC<Props> = ({ id }) => {
   };
 
   const onSubmitEmployeeInfo = (data: FormValues) => {
-    const { name, kana, birthdate, hometown, photo_url, elementary_school, junior_high_school, high_school, university, faculty, graduate_school, major } = data;
-    const payload = { name, kana, birthdate: birthdate ? toLocalDateString(birthdate) : undefined, hometown, photo_url, elementary_school, junior_high_school, high_school, university, faculty, graduate_school, major };
-    const filtered = Object.fromEntries(Object.entries(payload).filter(([_, v]) => v != null && v !== ""));
-    return api.put(`/employees/${id}`, filtered);
+    const { employee_id, name, kana, birthdate, hometown, photo_url, elementary_school, junior_high_school, high_school, university, faculty, graduate_school, major } = data;
+    const payload = { employee_id, name, kana, birthdate: birthdate ? toLocalDateString(birthdate) : undefined, hometown, photo_url, elementary_school, junior_high_school, high_school, university, faculty, graduate_school, major };
+    return api.put(`/employees/${id}`, payload);
   };
   const onSubmitEmploymentHistory = (data: FormValues) => {
     const historyArray = data.employment_history || [];
@@ -332,10 +340,9 @@ const ProfileForm: FC<Props> = ({ id }) => {
     return api.put(`/skill_info/${id}`, payload);
   };
   const onSubmitPrivateInfo = (data: FormValues) => {
-    const { blood_type, nickname, mbti, family_structure, father_job, mother_job, lessons, club_activities, jobs, circles, hobbies, favorite_foods, disliked_foods, holiday_activities, favorite_celebrities, favorite_characters, favorite_artists, favorite_comedians } = data;
-    const payload = { blood_type, nickname, mbti, family_structure, father_job, mother_job, lessons, club_activities, jobs, circles, hobbies, favorite_foods, disliked_foods, holiday_activities, favorite_celebrities, favorite_characters, favorite_artists, favorite_comedians };
-    const filtered = Object.fromEntries(Object.entries(payload).filter(([_, v]) => v != null && v !== ""));
-    return api.put(`/private_info/${id}`, filtered);
+    const { blood_type, nickname, mbti, family_structure, father_job, mother_job, lessons, club_activities, jobs, circles, hobbies, favorite_foods, disliked_foods, holiday_activities, favorite_celebrities, favorite_characters, favorite_artists, favorite_comedians,activities_free,favorite_things_free } = data;
+    const payload = { blood_type, nickname, mbti, family_structure, father_job, mother_job, lessons, club_activities, jobs, circles, hobbies, favorite_foods, disliked_foods, holiday_activities, favorite_celebrities, favorite_characters, favorite_artists, favorite_comedians,activities_free,favorite_things_free };
+    return api.put(`/private_info/${id}`, payload);
   };
   const onSubmitRelatedInfo = (data: FormValues) => {
     const seminarArray = data.seminar_videos || [];
@@ -477,7 +484,7 @@ const ProfileForm: FC<Props> = ({ id }) => {
 
                       <h2 className="text-xl font-semibold">基本情報</h2>
                       <div className="grid grid-cols-1 gap-4 px-1">
-                        <FormField control={form.control} name="employee_id" render={({ field }) => ( <FormItem><FormLabel>社員番号</FormLabel><FormControl>{employees && <Input {...field} value={employees.employee_id} readOnly />}</FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="employee_id" render={({ field }) => (<FormItem><FormLabel>社員番号</FormLabel><FormControl><Input {...field} readOnly={isLoading} placeholder="5桁の社員番号を入力" value={isEmployeeIdFocused ? (field.value ?? "") : String(field.value ?? "").padStart(5, '0')} onChange={(e) => e.target.value.length > 5 ? alert("社員番号は5桁以内で入力してください。") : field.onChange(e.target.value === "" ? null : isNaN(Number(e.target.value)) ? null : Number(e.target.value))} onFocus={() => setIsEmployeeIdFocused(true)} onBlur={() => (setIsEmployeeIdFocused(false), field.onBlur())} /></FormControl><FormMessage /></FormItem>)} />
                         <FormField control={form.control} name="name" render={({ field }) => ( <FormItem><FormLabel>氏名</FormLabel><FormControl><Input readOnly={isLoading} placeholder={employees?.name ?? "氏名を入力"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
                         <FormField control={form.control} name="kana" render={({ field }) => ( <FormItem><FormLabel>フリガナ</FormLabel><FormControl><Input readOnly={isLoading}  placeholder={employees?.kana ?? "フリガナを記入"} {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
                       </div>
@@ -544,7 +551,7 @@ const ProfileForm: FC<Props> = ({ id }) => {
                             <Button disabled={isLoading}  type="button" variant="ghost" size="icon" className="absolute top-2 right-2" onClick={() => removeKnowledge(index)}><X className="h-4 w-4" /></Button>
                             <FormField control={form.control} name={`insight_info.${index}.insight`} render={({ field }) => ( <FormItem className="mb-4"><FormLabel>タイトル</FormLabel><FormControl><Input readOnly={isLoading} placeholder="獲得知見のタイトルを入力 / 記入例 : データベース接続" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
                             <FormField control={form.control} name={`insight_info.${index}.comment`} render={({ field }) => ( <FormItem className="mb-4"><FormLabel>補足</FormLabel><FormControl><Textarea readOnly={isLoading} placeholder="獲得知見に関する補足的情報を入力" {...field} rows={3} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
-                            <FormField control={form.control} name={`insight_info.${index}.skill`} render={({ field }) => (<FormItem><FormLabel>関連スキル</FormLabel><FormControl><Input readOnly={isLoading} placeholder="獲得スキルを入力 / 記入例:スキル1,スキル2" {...field} value={field.value ?? ""} onChange={(e) => { const original = e.target.value; const replaced = original.replace(/[・\/、\-\\\s\u3000]/g, ","); if (original !== replaced && !window.__delimiterAlertShown) { alert("他の区切り文字（スペース スラッシュ バックスラッシュ 読点 中点 ハイフン 等）はカンマ（,）に自動変換されます。"); window.__delimiterAlertShown = true; } field.onChange(replaced); }} /></FormControl><FormMessage /></FormItem>)}/>
+                            <FormField control={form.control} name={`insight_info.${index}.skill`} render={({ field }) => (<FormItem><FormLabel>関連スキル</FormLabel><FormControl><Input readOnly={isLoading} placeholder="獲得スキルを入力 / 記入例:スキル1,スキル2" {...field} value={field.value ?? ""} onChange={(e) => { const original = e.target.value; const replaced = original.replace(/[・\/、\-\\\s\u3000]/g, "\\"); if (original !== replaced && !window.__delimiterAlertShown) { alert("他の区切り文字（スペース スラッシュ バックスラッシュ 読点 中点 ハイフン 等）はカンマ（,）に自動変換されます。"); window.__delimiterAlertShown = true; } field.onChange(replaced); }} /></FormControl><FormMessage /></FormItem>)}/>
                           </div>
                         ))}
                         <Button disabled={isLoading} type="button" variant="outline" className="w-full" onClick={addKnowledge}><Plus className="mr-2 h-4 w-4" /> 知見を追加</Button>
@@ -575,7 +582,7 @@ const ProfileForm: FC<Props> = ({ id }) => {
                     <div className="space-y-4">
                       <h2 className="text-xl font-semibold">家族・背景</h2>
                       <div className="grid grid-cols-1 gap-4">
-                        <FormField control={form.control} name="family_structure" render={({ field }) => ( <FormItem><FormLabel>家族構成</FormLabel><FormControl><Input placeholder={privateInfo?.family_structure ?? "家族構成を入力 / 記入例 : 父・母・本人"} {...field} value={field.value ?? ""} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="family_structure" render={({ field }) => ( <FormItem><FormLabel>実家家族構成</FormLabel><FormControl><Input placeholder={privateInfo?.family_structure ?? "家族構成を入力 / 記入例 : 父・母・本人"} {...field} value={field.value ?? ""} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <FormField control={form.control} name="father_job" render={({ field }) => ( <FormItem><FormLabel>父親の職業</FormLabel><FormControl><Input placeholder={privateInfo?.father_job ?? "職業名を入力"} {...field} value={field.value ?? ""} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
                           <FormField control={form.control} name="mother_job" render={({ field }) => ( <FormItem><FormLabel>母親の職業</FormLabel><FormControl><Input placeholder={privateInfo?.mother_job ?? "職業名を入力"} {...field} value={field.value ?? ""} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
@@ -595,12 +602,13 @@ const ProfileForm: FC<Props> = ({ id }) => {
                         <FormField control={form.control} name="club_activities" render={({ field }) => ( <FormItem><FormLabel>部活</FormLabel><FormControl><DelimitedTextarea placeholder={privateInfo?.club_activities ?? "部活を入力 / 記入例 : サッカー部 (中学), テニス部 (高校)"} value={field.value ?? ""} onChange={field.onChange} rows={2} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
                         <FormField control={form.control} name="jobs" render={({ field }) => ( <FormItem><FormLabel>アルバイト</FormLabel><FormControl><DelimitedTextarea placeholder={privateInfo?.jobs ?? "アルバイト経験を入力/ 記入例 : カフェ店員 (大学1年時), レストランスタッフ (大学2年時)"} value={field.value ?? ""} onChange={field.onChange} rows={2} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
                         <FormField control={form.control} name="circles" render={({ field }) => ( <FormItem><FormLabel>サークル</FormLabel><FormControl><DelimitedTextarea placeholder={privateInfo?.circles ?? "サークル活動を入力"} value={field.value ?? ""} onChange={field.onChange} rows={2} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="activities_free" render={({ field }) => ( <FormItem><FormLabel>その他の活動歴</FormLabel><FormControl><DelimitedTextarea placeholder={privateInfo?.activities_free ?? "その他の活動歴（自由記述）"}  value={field.value ?? ""} onChange={field.onChange} rows={2} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
                       </div>
 
                       <Separator className="my-6" />
 
                       <h2 className="text-xl font-semibold">趣味・好み</h2>
-                      <div className="grid grid-cols-1 gap-4">
+                      <div className="grid grid-cols-1 gap-4  pb-2">
                         <FormField control={form.control} name="hobbies" render={({ field }) => ( <FormItem><FormLabel>趣味</FormLabel><FormControl></FormControl><FormMessage /><DelimitedTextarea placeholder={privateInfo?.hobbies ?? "趣味を入力 / 記入例 : テニス ・ カラオケ"} value={field.value ?? ""} onChange={field.onChange} rows={2} readOnly={isLoading} /></FormItem> )} />
                         <FormField control={form.control} name="favorite_foods" render={({ field }) => ( <FormItem><FormLabel>好きな食べ物</FormLabel><FormControl><DelimitedTextarea placeholder={privateInfo?.favorite_foods ?? "好きな食べ物を入力 / 記入例 : 焼肉 ・ ラーメン"}  value={field.value ?? ""} onChange={field.onChange} rows={2} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
                         <FormField control={form.control} name="disliked_foods" render={({ field }) => ( <FormItem><FormLabel>苦手な食べ物</FormLabel><FormControl><DelimitedTextarea placeholder={privateInfo?.disliked_foods ?? "嫌いな食べ物を入力 / 記入例 : ゴーヤ ・ ピーマン"} value={field.value ?? ""} onChange={field.onChange} rows={2} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
@@ -609,6 +617,7 @@ const ProfileForm: FC<Props> = ({ id }) => {
                         <FormField control={form.control} name="favorite_characters" render={({ field }) => ( <FormItem><FormLabel>好きなキャラクター</FormLabel><FormControl><DelimitedTextarea placeholder={privateInfo?.favorite_characters ?? "好きなキャラクターを入力 / 記入例 : ドラえもん ・ スヌーピー"} value={field.value ?? ""} onChange={field.onChange} rows={2} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
                         <FormField control={form.control} name="favorite_artists" render={({ field }) => ( <FormItem><FormLabel>好きなアーティスト</FormLabel><FormControl><DelimitedTextarea placeholder={privateInfo?.favorite_artists ?? "好きなアーティストを入力 / 記入例 : Official髭男dism ・ あいみょん"} value={field.value ?? ""} onChange={field.onChange} rows={2} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
                         <FormField control={form.control} name="favorite_comedians" render={({ field }) => ( <FormItem><FormLabel>好きな芸人</FormLabel><FormControl><DelimitedTextarea placeholder={privateInfo?.favorite_comedians ?? "好きな芸人を入力 / 記入例 : サンドウィッチマン ・ 千鳥"}  value={field.value ?? ""} onChange={field.onChange} rows={2} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
+                        <FormField control={form.control} name="favorite_things_free" render={({ field }) => ( <FormItem><FormLabel>その他の好きなもの・こと</FormLabel><FormControl><DelimitedTextarea placeholder={privateInfo?.favorite_things_free ?? "その他の好きなもの・ことを入力（自由記述）"}  value={field.value ?? ""} onChange={field.onChange} rows={2} readOnly={isLoading}/></FormControl><FormMessage /></FormItem> )} />
                       </div>
                     </div>
                   </TabsContent>
