@@ -268,145 +268,147 @@ const addNewEmployeeToDatabase = async (emp: Employee) => {
 
       <main className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {employees.map((employee) => (
-            <div
-              key={employee.id}
-              className="bg-white rounded-lg shadow-md overflow-hidden relative"
-            >
-              {/* チェックボックス */}
-              <div className="absolute top-3 left-3 z-10">
-                <input
-                  type="checkbox"
-                  checked={employee.selected}
-                  onChange={() => toggleSelect(employee.id)}
-                  className="h-5 w-5"
-                  disabled={isAnyIncomplete}
-                />
-              </div>
+          {[...employees]
+            .sort((a, b) => (a.employee_id ?? 0) - (b.employee_id ?? 0))
+            .map((employee) => (
+              <div
+                key={employee.employee_id}
+                className="bg-white rounded-lg shadow-md overflow-hidden relative"
+              >
+                {/* チェックボックス */}
+                <div className="absolute top-3 left-3 z-10">
+                  <input
+                    type="checkbox"
+                    checked={employee.selected}
+                    onChange={() => toggleSelect(employee.id)}
+                    className="h-5 w-5"
+                    disabled={isAnyIncomplete}
+                  />
+                </div>
 
-              {/* 中断ボタン */}
-              {!employee.readOnly && (
-                <button
-                  onClick={() => handleCancel(employee.id)}
-                  className="absolute top-3 right-3 z-10 text-gray-500 hover:text-red-600"
-                >
-                  <div className="flex gap-2 items-center">
-                    <p className="text-sm">追加を中断</p>
-                    <X />
-                  </div>
-                </button>
-              )}
+                {/* 中断ボタン */}
+                {!employee.readOnly && (
+                  <button
+                    onClick={() => handleCancel(employee.id)}
+                    className="absolute top-3 right-3 z-10 text-gray-500 hover:text-red-600"
+                  >
+                    <div className="flex gap-2 items-center">
+                      <p className="text-sm">追加を中断</p>
+                      <X />
+                    </div>
+                  </button>
+                )}
 
-              <div className="w-full h-48 relative">
-                <Image
-                  src={employee.photo_url}
-                  alt={employee.name || "写真"}
-                  fill
-                  className="object-cover"
-                />
-              </div>
+                <div className="w-full h-48 relative">
+                  <Image
+                    src={employee.photo_url}
+                    alt={employee.name || "写真"}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
 
-              <div className="p-4 space-y-2">
-                <input
-                  ref={(el) => {
-                    employeeIdRefs.current[employee.id] = el;
-                  }}
-                  className="w-full px-2 py-1 rounded text-sm flex items-end"
-                  placeholder="5桁の社員番号を入力"
-
-                  value={
-                    employee.readOnly
-                      ? String(employee.employee_id ?? "").padStart(5, "0")
-                      : employee.employee_id ?? ""
-                  }
-                  readOnly={employee.readOnly || employee.editingStep !== "employee_id"}
-
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val.length > 5) {
-                      alert("社員番号は5桁以内で入力してください。");
-                      return;
-                    }
-                    const numVal =
-                      val === "" ? null : isNaN(Number(val)) ? null : Number(val);
-                    setEmployees((prev) =>
-                      prev.map((emp) =>
-                        emp.id === employee.id ? { ...emp, employee_id: numVal } : emp
-                      )
-                    );
-                  }}
-
-                  onKeyDown={(e) => handleKeyDown(e, employee.id)}
-                  onBlur={() => handleBlur(employee.id)}
-                />
-                {employee.editingStep !== "employee_id" && (
+                <div className="p-4 space-y-2">
                   <input
                     ref={(el) => {
-                      nameRefs.current[employee.id] = el
+                      employeeIdRefs.current[employee.id] = el;
                     }}
-                    className="w-full px-2 py-1 rounded pt-0"
-                    placeholder="名前を入力"
-                    value={employee.name ?? ""}
-                    readOnly={employee.readOnly || employee.editingStep !== "name"}
+                    className="w-full px-2 py-1 rounded text-sm flex items-end"
+                    placeholder="5桁の社員番号を入力"
+
+                    value={
+                      employee.readOnly
+                        ? String(employee.employee_id ?? "").padStart(5, "0")
+                        : employee.employee_id ?? ""
+                    }
+                    readOnly={employee.readOnly || employee.editingStep !== "employee_id"}
+
                     onChange={(e) => {
-                      const val = e.target.value
+                      const val = e.target.value;
+                      if (val.length > 5) {
+                        alert("社員番号は5桁以内で入力してください。");
+                        return;
+                      }
+                      const numVal =
+                        val === "" ? null : isNaN(Number(val)) ? null : Number(val);
                       setEmployees((prev) =>
                         prev.map((emp) =>
-                          emp.id === employee.id ? { ...emp, name: val } : emp
+                          emp.id === employee.id ? { ...emp, employee_id: numVal } : emp
                         )
-                      )
+                      );
                     }}
+
                     onKeyDown={(e) => handleKeyDown(e, employee.id)}
                     onBlur={() => handleBlur(employee.id)}
                   />
-                )}
+                  {employee.editingStep !== "employee_id" && (
+                    <input
+                      ref={(el) => {
+                        nameRefs.current[employee.id] = el
+                      }}
+                      className="w-full px-2 py-1 rounded pt-0"
+                      placeholder="名前を入力"
+                      value={employee.name ?? ""}
+                      readOnly={employee.readOnly || employee.editingStep !== "name"}
+                      onChange={(e) => {
+                        const val = e.target.value
+                        setEmployees((prev) =>
+                          prev.map((emp) =>
+                            emp.id === employee.id ? { ...emp, name: val } : emp
+                          )
+                        )
+                      }}
+                      onKeyDown={(e) => handleKeyDown(e, employee.id)}
+                      onBlur={() => handleBlur(employee.id)}
+                    />
+                  )}
 
-                {employee.readOnly && (
-                  <button
-                    onClick={() => goToDetail(employee.id)}
-                    disabled={isAnyIncomplete}
-                    className="w-full py-2 px-4 border border-gray-300 rounded-md flex items-center justify-center gap-2 hover:bg-gray-50"
-                  >
-                    <Edit size={16} />
-                    詳細を見る
-                  </button>
-                )}
+                  {employee.readOnly && (
+                    <button
+                      onClick={() => goToDetail(employee.id)}
+                      disabled={isAnyIncomplete}
+                      className="w-full py-2 px-4 border border-gray-300 rounded-md flex items-center justify-center gap-2 hover:bg-gray-50"
+                    >
+                      <Edit size={16} />
+                      詳細を見る
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </main>
+            ))}
+          </div>
+        </main>
 
-      {/* 追加ボタン */}
-      <div className="fixed bottom-8 inset-x-0 flex justify-center pointer-events-none">
-        <button
-          onClick={addEmployee}
-          disabled={isAnyIncomplete}
-          className="bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-full shadow-lg flex items-center gap-2 pointer-events-auto"
-        >
-          <Plus size={20} />
-          メンバーを追加
-        </button>
-      </div>
-
-      {/* 削除ボタン */}
-      {employees.some((emp) => emp.selected) && (
-        <div className="fixed bottom-8 right-8">
+        {/* 追加ボタン */}
+        <div className="fixed bottom-8 inset-x-0 flex justify-center pointer-events-none">
           <button
-            onClick={deleteSelected}
+            onClick={addEmployee}
             disabled={isAnyIncomplete}
-            className="bg-red-600 hover:bg-red-700 text-white py-3 px-6 rounded-full shadow-lg flex items-center gap-2"
+            className="bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-full shadow-lg flex items-center gap-2 pointer-events-auto"
           >
-            <Trash2 size={20} />
-            削除
+            <Plus size={20} />
+            メンバーを追加
           </button>
         </div>
-      )}
-      {isLoading && (<div className="fixed bottom-4 right-4 flex items-center gap-2 px-4 py-2 bg-white text-gray-800 shadow-lg rounded-lg border z-50">
-        <Loader2 className="animate-spin w-5 h-5 text-blue-500" />
-        <span className="text-sm">データ取得中…<br/>少々お待ちください</span>
-      </div>)}
-    </div>
+
+        {/* 削除ボタン */}
+        {employees.some((emp) => emp.selected) && (
+          <div className="fixed bottom-8 right-8">
+            <button
+              onClick={deleteSelected}
+              disabled={isAnyIncomplete}
+              className="bg-red-600 hover:bg-red-700 text-white py-3 px-6 rounded-full shadow-lg flex items-center gap-2"
+            >
+              <Trash2 size={20} />
+              削除
+            </button>
+          </div>
+        )}
+        {isLoading && (<div className="fixed bottom-4 right-4 flex items-center gap-2 px-4 py-2 bg-white text-gray-800 shadow-lg rounded-lg border z-50">
+          <Loader2 className="animate-spin w-5 h-5 text-blue-500" />
+          <span className="text-sm">データ取得中…<br/>少々お待ちください</span>
+        </div>)}
+      </div>
   )
 }
 
