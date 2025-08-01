@@ -266,7 +266,6 @@ const ProfileForm: FC<Props> = ({ id }) => {
       };
       const newSeminarThumbnails = formattedValues.seminar_videos
           .map(video => video.seminar_thumbnail_url)
-          .filter(url => url);
 
       if (newSeminarThumbnails.length > 0) {
           setPreviewSeminarUrls(newSeminarThumbnails);
