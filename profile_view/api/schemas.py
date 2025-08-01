@@ -244,17 +244,23 @@ class PrivateInfoOut(BaseModel):
 class RelatedInfoCreate(BaseModel):
     employee_id: int
     profile_video: Optional[str] = None
+    profile_thumbnail_url: Optional[str] = None
     seminar_videos: Optional[str] = None
+    seminar_thumbnail_url: Optional[str] = None
 
 class RelatedInfoUpdate(BaseModel):
     profile_video: Optional[str] = None
+    profile_thumbnail_url: Optional[str] = None
     seminar_videos: Optional[str] = None
+    seminar_thumbnail_url: Optional[str] = None
 
 class RelatedInfoOut(BaseModel):
     id: int
     employee_id: int
     profile_video: Optional[str] = None
+    profile_thumbnail_url: Optional[str] = None
     seminar_videos: Optional[str] = None
+    seminar_thumbnail_url: Optional[str] = None
     class Config:
         orm_mode = True
 

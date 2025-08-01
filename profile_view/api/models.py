@@ -109,7 +109,9 @@ class RelatedInfo(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     employee_id = Column(Integer, unique=True, nullable=False)
     profile_video = Column(Unicode(500))
+    profile_thumbnail_url = Column(Unicode(500))
     seminar_videos = Column(Unicode(500))
+    seminar_thumbnail_url = Column(Unicode(500))
 
 
 

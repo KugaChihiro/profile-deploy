@@ -162,6 +162,22 @@ const ProfilePage: FC<Props> = ({ id }) => {
     }));
   };
 
+  type VideoUnit = {
+    video_url: string | undefined;
+    thumbnail_url:string | undefined;
+  };
+
+  const parseSeminarInfo = (): VideoUnit[] => {
+    const video_url = relatedInfo && (relatedInfo.seminar_videos?.split(",") ?? []);
+    const thumbnail_url = relatedInfo && (relatedInfo.seminar_thumbnail_url?.split(",") ?? []);
+
+    if (!video_url || video_url.length === 0) return [];
+
+    return video_url.map((video_url, index) => ({
+      video_url: video_url?.trim() || undefined,
+      thumbnail_url : thumbnail_url?.[index]?.trim() || undefined,
+    }));
+  };
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -697,6 +713,7 @@ const ProfilePage: FC<Props> = ({ id }) => {
                           className="w-full h-full object-cover"
                           controls
                           src={relatedInfo?.profile_video  || undefined}
+                          poster={relatedInfo?.profile_thumbnail_url || undefined}
                         >
                         </video>
                         <div className="absolute inset-0 bg-white/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300  pointer-events-none flex items-center justify-center">
@@ -730,14 +747,15 @@ const ProfilePage: FC<Props> = ({ id }) => {
                 <div>
                   <h2 className="text-2xl font-bold mb-4">セミナー動画</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {relatedInfo?.seminar_videos?.split(',').map((item, index) => (
+                    {parseSeminarInfo().map((item, index) => (
                       <div className = "flex flex-col"  key={index}>
                         {item ? (
-                          <div className="relative aspect-video bg-black rounded-lg overflow-hidden group cursor-pointer" onClick={() => SeminarVideoClick(item ?? "")}>
+                          <div className="relative aspect-video bg-black rounded-lg overflow-hidden group cursor-pointer" onClick={() => SeminarVideoClick(item.video_url ?? "")}>
                             <video
                               className="w-full h-full object-cover"
                               controls
-                              src={item  || undefined}
+                              src={item.video_url  || undefined}
+                              poster={item?.thumbnail_url || undefined}
                             >
                             </video>
                             <div className="absolute inset-0 bg-white/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300  pointer-events-none flex items-center justify-center">
@@ -759,12 +777,12 @@ const ProfilePage: FC<Props> = ({ id }) => {
                           <div className="mt-4 p-3 bg-gray-100 rounded-md border-gray-300 text-gray-700 break-all select-text cursor-text flex gap-2 items-center">
                             <LinkIcon/>
                             <a
-                              href={item}
+                              href={item.video_url}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-sm hover:text-gray-300"
                             >
-                              {item}
+                              {item.video_url}
                             </a>
                           </div>
                           ) : (

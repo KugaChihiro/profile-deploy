@@ -1,6 +1,8 @@
 export type RelatedInfoBase = {
   profile_video?: string | null;
+  profile_thumbnail_url?:string | null;
   seminar_videos?: string | null;
+  seminar_thumbnail_url?:string | null;
 };
 
 export type RelatedInfoCreate = {

@@ -40,7 +40,6 @@ def generate_read_sas_url(blob_name: str) -> str:
 
     # 完全な読み取り用URLを返す
     return f"https://{account_name}.blob.core.windows.net/{settings.AZURE_STORAGE_CONTAINER_NAME}/{blob_name}?{token}"
-# ★★★★★ ここまで追加 ★★★★★
 
 
 @router.post("/generate-sas-token", response_model=SasTokenResponse)

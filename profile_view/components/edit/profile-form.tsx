@@ -144,10 +144,12 @@ const formSchema = z.object({
   activities_free : z.string().optional().nullable(),
   favorite_things_free : z.string().optional().nullable(),
   profile_video: z.string().optional().nullable(),
+  profile_thumbnail_url: z.string().optional().nullable(),
   seminar_videos: z
     .array(
       z.object({
         seminar_videos: z.string().optional().nullable(),
+        seminar_thumbnail_url: z.string().optional().nullable(),
       }),
     )
     .default([]),
@@ -176,16 +178,25 @@ const ProfileForm: FC<Props> = ({ id }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null) ;
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [resetImage,setResetImage] = useState<boolean | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [resetImage,setResetImage] = useState<boolean | null>(null);
+  const [previewUrlPV, setPreviewUrlPV] = useState<string | null>(null) ;
+  const [selectedFilePV, setSelectedFilePV] = useState<File | null>(null);
+  const [resetImagePV,setResetImagePV] = useState<boolean | null>(null);
+  const fileInputRefP = useRef<HTMLInputElement>(null);
+
+  const [previewSeminarUrls, setPreviewSeminarUrls] = useState<(string | null)[]>([]);
+  const [selectedSeminarFiles, setSelectedSeminarFiles] = useState<(File | null)[]>([]);
+  const [resetSeminarImages, setResetSeminarImages] = useState<boolean[]>([]);
+  const fileInputRefS = useRef<(HTMLInputElement | null)[]>([]);
 
   const router = useRouter()
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "", kana: "", birthdate: undefined, hometown: "", elementary_school: "", junior_high_school: "", high_school: "", university: "", faculty: "", graduate_school: "", major: "", photo_url: "", blood_type: "", nickname: "", mbti: "", family_structure: "", father_job: "", mother_job: "", lessons: "", club_activities: "", jobs: "", circles: "", hobbies: "", favorite_foods: "", disliked_foods: "", holiday_activities: "", favorite_celebrities: "", favorite_characters: "", favorite_artists: "", favorite_comedians: "", activities_free: "", favorite_things_free: "", profile_video: "", employment_history: [], project_info: [], insight_info: [], skill_info: [], seminar_videos: [],
+      name: "", kana: "", birthdate: undefined, hometown: "", elementary_school: "", junior_high_school: "", high_school: "", university: "", faculty: "", graduate_school: "", major: "", photo_url: "", blood_type: "", nickname: "", mbti: "", family_structure: "", father_job: "", mother_job: "", lessons: "", club_activities: "", jobs: "", circles: "", hobbies: "", favorite_foods: "", disliked_foods: "", holiday_activities: "", favorite_celebrities: "", favorite_characters: "", favorite_artists: "", favorite_comedians: "", activities_free: "", favorite_things_free: "", profile_video: "", profile_thumbnail_url:"", employment_history: [], project_info: [], insight_info: [], skill_info: [], seminar_videos: [],
     },
   })
 
@@ -238,6 +249,9 @@ const ProfileForm: FC<Props> = ({ id }) => {
     if (employees?.photo_url) {
         setPreviewUrl(employees.photo_url);
     }
+    if (relatedInfo?.profile_thumbnail_url) {
+        setPreviewUrlPV(relatedInfo.profile_thumbnail_url);
+    }
     if (employees && employmentHistory && projectInfo && insightInfo && skillInfo && privateInfo && relatedInfo) {
       const formattedValues = {
         ...employees,
@@ -248,8 +262,15 @@ const ProfileForm: FC<Props> = ({ id }) => {
         project_info: projectInfo.project?.split(',').map((proj, index) => ({ project: proj, comment: projectInfo.comment?.split(',')[index] ?? null, skill: projectInfo.skill?.split(',')[index]?.replace(/\\/g, ',') ?? null, start_date: projectInfo.start_date?.split(',')[index] ?? null, end_date: projectInfo.end_date?.split(',')[index] ?? null, })).filter(item => item.project) ?? [],
         insight_info: insightInfo.insight?.split(',').map((ins, index) => ({ insight: ins, comment: insightInfo.comment?.split(',')[index] ?? null, skill: insightInfo.skill?.split(',')[index]?.replace(/\\/g, ',') ?? null, })).filter(item => item.insight) ?? [],
         skill_info: skillInfo.skill?.split(',').map(s => ({ skill: s })).filter(item => item.skill) ?? [],
-        seminar_videos: relatedInfo.seminar_videos?.split(',').map(s => ({ seminar_videos: s.trim() })).filter(item => item.seminar_videos) ?? [],
+        seminar_videos: relatedInfo.seminar_videos?.split(',').map((semi,index) => ({ seminar_videos: semi,seminar_thumbnail_url:relatedInfo.seminar_thumbnail_url?.split(',')[index] ?? null})).filter(item => item.seminar_videos) ?? [],
       };
+      const newSeminarThumbnails = formattedValues.seminar_videos
+          .map(video => video.seminar_thumbnail_url)
+          .filter(url => url);
+
+      if (newSeminarThumbnails.length > 0) {
+          setPreviewSeminarUrls(newSeminarThumbnails);
+      }
       form.reset(formattedValues as FormValues);
     }
   }, [employees, employmentHistory, projectInfo, insightInfo, skillInfo, privateInfo, relatedInfo, form.reset]);
@@ -257,30 +278,75 @@ const ProfileForm: FC<Props> = ({ id }) => {
   const handleUploadButtonClick = () => {
     fileInputRef.current?.click();
   }
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) {
-      setSelectedFile(null);
-      return;
-    }
-    setSelectedFile(file);
-    setResetImage(false)
-    console.log(resetImage)
+  const handleUploadButtonClickP = () => {
+    fileInputRefP.current?.click();
+  }
+  const handleUploadButtonClickS = (index:number) => {
+    fileInputRefS.current[index]?.click();
   }
 
-  const uploadImageAndGetUrl = async (file: File): Promise<string | null> => {
+
+  const handleFileChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    type: string,
+    index?: number
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    if (type === "profile") {
+      setSelectedFile(file);
+      setResetImage(false);
+    } else if (type === "profile_video") {
+      setSelectedFilePV(file);
+      setResetImagePV(false);
+    } else if (type === "seminar_video" && index !== undefined) {
+      const newFiles = [...selectedSeminarFiles];
+      const newResets = [...resetSeminarImages];
+
+      while (newFiles.length <= index) newFiles.push(null);
+      while (newResets.length <= index) newResets.push(false);
+
+      newFiles[index] = file;
+      newResets[index] = false;
+
+      setSelectedSeminarFiles(newFiles);
+      setResetSeminarImages(newResets);
+    }
+  };
+
+  const uploadImageAndGetUrl = async (
+    file: File,
+    type: "profile" | "profile_video" | "seminar_video",
+    index?: number
+  ): Promise<string | null> => {
     setIsUploading(true);
     try {
       const fileExtension = file.name.split('.').pop();
-      const fileName = `${id}_profile_image.${fileExtension}`;
+      let fileName = "";
+
+      // typeに応じてファイル名を決定
+      if (type === "profile") {
+        fileName = `${id}_profile_image.${fileExtension}`;
+      } else if (type === "profile_video") {
+        fileName = `${id}_profile_video_thumbnail.${fileExtension}`;
+      } else if (type === "seminar_video" && index !== undefined) {
+        fileName = `${id}_seminar_video_thumbnail_${index}.${fileExtension}`;
+      } else {
+        throw new Error("Invalid upload type or missing index.");
+      }
+
       const sasResponse = await api.post(`/generate-sas-token`, { fileName });
       const { sasUrl, storageUrl } = sasResponse.data;
       if (!sasUrl || !storageUrl) throw new Error("SASトークンの取得に失敗しました。");
+
       const blobClient = new BlockBlobClient(sasUrl);
       await blobClient.uploadData(file, { blobHTTPHeaders: { blobContentType: file.type } });
-      setResetImage(false);
+
       return storageUrl;
+
     } catch (error) {
       console.error("アップロードエラー:", error);
       return null;
@@ -346,8 +412,19 @@ const ProfileForm: FC<Props> = ({ id }) => {
   };
   const onSubmitRelatedInfo = (data: FormValues) => {
     const seminarArray = data.seminar_videos || [];
-    const formattedSeminarVideos = seminarArray.map(video => video.seminar_videos ?? "").filter(url => url !== "").join(",");
-    const payload = { profile_video: data.profile_video, seminar_videos: formattedSeminarVideos };
+    const formattedSeminarVideos = seminarArray
+      .map(video => video.seminar_videos ?? "")
+      .filter(url => url !== "")
+      .join(",");
+    const formattedThumbnailUrls = seminarArray
+      .map(video => video.seminar_thumbnail_url ?? "")
+      .join(",");
+    const payload = {
+      profile_video: data.profile_video,
+      profile_thumbnail_url: data.profile_thumbnail_url,
+      seminar_videos: formattedSeminarVideos,
+      seminar_thumbnail_url: formattedThumbnailUrls,
+    };
     return api.put(`/related_info/${id}`, payload);
   };
 
@@ -356,13 +433,13 @@ const ProfileForm: FC<Props> = ({ id }) => {
 
   const onSubmit = async (data: FormValues) => {
     let finalData = { ...data };
-    if (selectedFile) {
-      const newPhotoUrl = await uploadImageAndGetUrl(selectedFile);
 
+    if (selectedFile) {
+      const newPhotoUrl = await uploadImageAndGetUrl(selectedFile, "profile");
       if (newPhotoUrl) {
         finalData.photo_url = newPhotoUrl;
       } else {
-        alert("画像のアップロードに失敗したため、プロフィールを保存できませんでした。");
+        alert("画像のアップロードに失敗したため、保存を中断しました。");
         return;
       }
     } else {
@@ -373,7 +450,59 @@ const ProfileForm: FC<Props> = ({ id }) => {
       api.put(`/reset_image/${id}`);
     }
 
+
+    // --- プロフィール動画サムネイルの処理 ---
+    if (selectedFilePV) {
+      const newThumbnailUrl = await uploadImageAndGetUrl(selectedFilePV, "profile_video");
+      if (newThumbnailUrl) {
+        finalData.profile_thumbnail_url = newThumbnailUrl;
+      } else {
+        alert("画像のアップロードに失敗したため、保存を中断しました。");
+        return;
+      }
+    } else {
+      delete finalData.profile_thumbnail_url;
+    }
+
+    if (resetImagePV) {
+      api.put(`/reset_profile_thumbnail/${id}`);
+    }
+
+    // --- セミナー動画サムネイルの処理 ---
+    if (selectedSeminarFiles && selectedSeminarFiles.length > 0) {
+
+      for (const [index, file] of selectedSeminarFiles.entries()) {
+        // file が null または undefined の場合はスキップ
+        if (file != null) {
+          const newThumbnailUrl = await uploadImageAndGetUrl(file, "seminar_video", index);
+          if (newThumbnailUrl) {
+            if (finalData.seminar_videos && finalData.seminar_videos[index]) {
+              finalData.seminar_videos[index].seminar_thumbnail_url = newThumbnailUrl;
+            }
+          } else {
+            alert(`セミナー動画${index + 1}の画像アップロードに失敗したため、保存を中断しました。`);
+            return;
+          }
+        }
+      }
+    }
+
+    const noUploadedThumbnails = selectedSeminarFiles.every((file) => !file);
+    const noExistingThumbnails = finalData.seminar_videos.every(
+      (video) => !video.seminar_thumbnail_url
+    );
+
+    if (noUploadedThumbnails && noExistingThumbnails) {
+      // 明示的に削除
+      for (const video of finalData.seminar_videos) {
+        delete video.seminar_thumbnail_url;
+      }
+      await api.put(`/reset_seminar_thumbnail/${id}`);
+    }
+
+
     try {
+      // --- DBへの保存処理 ---
       await Promise.all([
         onSubmitEmployeeInfo(finalData),
         onSubmitEmploymentHistory(finalData),
@@ -391,27 +520,51 @@ const ProfileForm: FC<Props> = ({ id }) => {
     }
   };
 
-  const handleNextTabClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    goToNextTab();
-  };
+    const handleNextTabClick = (e: React.MouseEvent) => {
+      e.preventDefault();
+      goToNextTab();
+    };
 
-  const goToNextTab = () => {
-    if (activeTab === "basic") setActiveTab("professional");
-    else if (activeTab === "professional") setActiveTab("personal");
-    else if (activeTab === "personal") setActiveTab("media");
-  };
+    const goToNextTab = () => {
+      if (activeTab === "basic") setActiveTab("professional");
+      else if (activeTab === "professional") setActiveTab("personal");
+      else if (activeTab === "personal") setActiveTab("media");
+    };
 
-  const goToPrevTab = () => {
-    if (activeTab === "media") setActiveTab("personal");
-    else if (activeTab === "personal") setActiveTab("professional");
-    else if (activeTab === "professional") setActiveTab("basic");
-  };
+    const goToPrevTab = () => {
+      if (activeTab === "media") setActiveTab("personal");
+      else if (activeTab === "personal") setActiveTab("professional");
+      else if (activeTab === "professional") setActiveTab("basic");
+    };
 
-  const handleResetImage = () => {
-    setSelectedFile(null);
-    setPreviewUrl(null);
-    setResetImage(true);
+  const handleResetImage = (type: string, index?: number) => {
+    if (type === "profile") {
+      setSelectedFile(null);
+      setPreviewUrl(null);
+      setResetImage(true);
+    } else if (type === "profile_video") {
+      setSelectedFilePV(null);
+      setPreviewUrlPV(null);
+      setResetImagePV(true);
+    } else if (type === "seminar_video" && index !== undefined) {
+      const newFiles = [...selectedSeminarFiles];
+      const newUrls = [...previewSeminarUrls];
+      const newResets = [...resetSeminarImages];
+
+      while (newFiles.length <= index) newFiles.push(null);
+      while (newUrls.length <= index) newUrls.push(null);
+      while (newResets.length <= index) newResets.push(false);
+
+      newFiles[index] = null;
+      newUrls[index] = null;
+      newResets[index] = true;
+
+      setSelectedSeminarFiles(newFiles);
+      setPreviewSeminarUrls(newUrls);
+      setResetSeminarImages(newResets);
+
+      setValue(`seminar_videos.${index}.seminar_thumbnail_url`, null);
+    }
   };
 
   return (
@@ -453,7 +606,7 @@ const ProfileForm: FC<Props> = ({ id }) => {
                           )}
                         </div>
 
-                        <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/png, image/jpeg, image/gif" />
+                        <input type="file" ref={fileInputRef} onChange={(e) => handleFileChange(e, "profile")} className="hidden" accept="image/png, image/jpeg, image/gif" />
                           <div className="flex items-center gap-4">
                             {/* 写真を選択 */}
                             <Button
@@ -471,7 +624,7 @@ const ProfileForm: FC<Props> = ({ id }) => {
                               <Button
                                 type="button"
                                 variant="outline"
-                                onClick={handleResetImage}
+                                onClick={() => handleResetImage("profile")}
                                 disabled={isLoading}
                               >
                                 <Trash className="mr-2 h-4 w-4"/>
@@ -626,8 +779,67 @@ const ProfileForm: FC<Props> = ({ id }) => {
                     <div className="space-y-4">
                       <h2 className="text-xl font-semibold">プロフィール動画</h2>
                       <div className="bg-slate-50 p-4 rounded-lg">
-                        <div className="aspect-video bg-slate-100 rounded-lg flex items-center justify-center mb-4"><div className="text-center p-6"><Upload className="h-12 w-12 mx-auto text-slate-400 mb-2" /><p className="text-slate-500">動画をアップロード</p></div></div>
-                        <FormField control={form.control} name="profile_video" render={({ field }) => ( <FormItem><FormLabel>動画URL</FormLabel><FormControl><Input placeholder="動画URLを入力 / 記入例 : https://example.com/video" {...field} value={field.value ?? ""} readOnly={isLoading} /></FormControl><FormMessage /></FormItem> )} />
+                        <div className="aspect-video bg-slate-100 rounded-lg flex items-center justify-center mb-4">
+                          <div className="text-center p-6">
+                            <Upload className="h-12 w-12 mx-auto text-slate-400 mb-2" />
+                            <p className="text-slate-500">動画をアップロード</p>
+                          </div>
+                        </div>
+                        <FormField
+                          control={form.control}
+                          name="profile_video"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>動画URL</FormLabel>
+                              <FormControl>
+                                <Input placeholder="動画URLを入力 / 記入例 : https://example.com/video" {...field} value={field.value ?? ""} readOnly={isLoading} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <p className="mt-[20px] mb-[10px] text-[14px] font-medium">サムネイル画像</p>
+                        <div className="flex items-center gap-6">
+                          <div className="relative h-24 w-24 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden">
+                            {selectedFilePV ? (
+                              <div className="text-center text-xs font-semibold text-slate-600 p-2">Already<br />Selected</div>
+                            ) : previewUrlPV ? (
+                              <Image src={previewUrlPV} alt="プロフィール動画サムネイル" layout="fill" objectFit="cover" />
+                            ) : (
+                              <User className="h-12 w-12 text-slate-400" />
+                            )}
+                          </div>
+                          <input
+                            type="file"
+                            ref={fileInputRefP}
+                            onChange={(e) => handleFileChange(e, "profile_video")}
+                            className="hidden"
+                            accept="image/png, image/jpeg, image/gif"
+                          />
+                          <div className="flex items-center gap-4">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={handleUploadButtonClickP}
+                              disabled={form.formState.isSubmitting || isLoading}
+                            >
+                              <Upload className="mr-2 h-4 w-4" />
+                              サムネイル画像を選択
+                            </Button>
+
+                            {(selectedFilePV || previewUrlPV || relatedInfo?.profile_thumbnail_url) && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => handleResetImage("profile_video")}
+                                disabled={isLoading}
+                              >
+                                <Trash className="mr-2 h-4 w-4" />
+                                選択した写真をリセット
+                              </Button>
+                            )}
+                          </div>
+                        </div>
                       </div>
 
                       <Separator className="my-6" />
@@ -637,13 +849,72 @@ const ProfileForm: FC<Props> = ({ id }) => {
                         {(seminarVideos ?? []).map((video, index) => (
                           <div key={index} className="bg-slate-50 p-4 rounded-lg relative">
                             <div className="bg-slate-50 p-4 rounded-lg">
-                              <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2" onClick={() => removeSeminarVideo(index)}  disabled={isLoading}><X className="h-4 w-4"/></Button>
-                              <div className="aspect-video bg-slate-100 rounded-lg flex items-center justify-center mb-4"><div className="text-center p-6"><Upload className="h-12 w-12 mx-auto text-slate-400 mb-2" /><p className="text-slate-500">動画をアップロード</p></div></div>
-                              <FormField control={form.control} name={`seminar_videos.${index}.seminar_videos`} render={({ field }) => ( <FormItem><FormLabel>動画URL</FormLabel><FormControl><Input placeholder="https://example.com/video" {...field} value={field.value ?? ""} readOnly={isLoading} /></FormControl><FormMessage /></FormItem> )} />
+                              <Button type="button" variant="ghost" size="icon" className="absolute top-2 right-2" onClick={() => removeSeminarVideo(index)} disabled={isLoading}>
+                                <X className="h-4 w-4" />
+                              </Button>
+                              <div className="aspect-video bg-slate-100 rounded-lg flex items-center justify-center mb-4">
+                                <div className="text-center p-6">
+                                  <Upload className="h-12 w-12 mx-auto text-slate-400 mb-2" />
+                                  <p className="text-slate-500">動画をアップロード</p>
+                                </div>
+                              </div>
+                              <FormField control={form.control} name={`seminar_videos.${index}.seminar_videos`} render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>動画URL</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="https://example.com/video" {...field} value={field.value ?? ""} readOnly={isLoading} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )} />
+                              <p className="mt-[20px] mb-[10px] text-[14px] font-medium">サムネイル画像</p>
+                              <div className="flex items-center gap-6">
+                                <div className="relative h-24 w-24 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden">
+                                  {selectedSeminarFiles[index] ? (
+                                    <div className="text-center text-xs font-semibold text-slate-600 p-2">Already<br />Selected</div>
+                                  ) : previewSeminarUrls[index] ? (
+                                    <Image src={previewSeminarUrls[index]!} alt="セミナー動画サムネイル" layout="fill" objectFit="cover" />
+                                  ) :  (
+                                    <User className="h-12 w-12 text-slate-400" />
+                                  )}
+                                </div>
+                                <input
+                                  type="file"
+                                  ref={(el) => { fileInputRefS.current[index] = el; }}
+                                  onChange={(e) => handleFileChange(e, "seminar_video", index)}
+                                  className="hidden"
+                                  accept="image/png, image/jpeg, image/gif"
+                                />
+                                <div className="flex items-center gap-4">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={()=>handleUploadButtonClickS(index)}
+                                    disabled={form.formState.isSubmitting || isLoading}
+                                  >
+                                    <Upload className="mr-2 h-4 w-4" />
+                                    サムネイル画像を選択
+                                  </Button>
+
+                                  {(selectedSeminarFiles[index] || video.seminar_thumbnail_url) && (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      onClick={() => handleResetImage("seminar_video", index)}
+                                      disabled={isLoading}
+                                    >
+                                      <Trash className="mr-2 h-4 w-4" />
+                                      選択した写真をリセット
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                           </div>
                         ))}
-                        <Button type="button" variant="outline" className="w-full" onClick={addSeminarVideo}><Plus className="mr-2 h-4 w-4" /> セミナー動画を追加</Button>
+                        <Button type="button" variant="outline" className="w-full" onClick={addSeminarVideo}>
+                          <Plus className="mr-2 h-4 w-4" /> セミナー動画を追加
+                        </Button>
                       </div>
                     </div>
                   </TabsContent>
