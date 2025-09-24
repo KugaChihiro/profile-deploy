@@ -14,6 +14,7 @@ import { InsightInfoOut } from "@/types/insight_info";
 import { SkillInfoOut } from "@/types/skill_info";
 import { PrivateInfoOut } from "@/types/private_info";
 import { RelatedInfoOut } from "@/types/related_info";
+import { ProjectMember, ProjectInfo } from "@/types/project_management";
 import {
   User,
   Briefcase,
@@ -61,6 +62,8 @@ const ProfilePage: FC<Props> = ({ id }) => {
   const [skillInfo, setSkillInfo] = useState<SkillInfoOut | null>(null);
   const [privateInfo, setPrivateInfo] = useState<PrivateInfoOut | null>(null);
   const [relatedInfo, setRelatedInfo] = useState<RelatedInfoOut | null>(null);
+  const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
+  const [managementProjects, setManagementProjects] = useState<ProjectInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter()
 
@@ -207,6 +210,33 @@ const ProfilePage: FC<Props> = ({ id }) => {
         setSkillInfo(resSkill.data);
         setPrivateInfo(resPrivate.data);
         setRelatedInfo(resRelated.data);
+
+        // 従業員名が取得できたら、プロジェクト管理データベースからも情報を取得
+        if (resEmployee.data?.name) {
+          try {
+            // 1. チームメンバー情報を取得
+            const resTeamMembers = await api.get(
+              `/project-management/team-members/${resEmployee.data.name}`
+            );
+            setProjectMembers(resTeamMembers.data);
+
+            // 2. プロジェクトIDを抽出
+            const projectIds = resTeamMembers.data.map(
+              (member: ProjectMember) => member.project_id
+            );
+
+            if (projectIds.length > 0) {
+              // 3. プロジェクト情報を取得
+              const resManagementProjects = await api.get(
+                `/project-management/projects?project_ids=${projectIds.join(',')}`
+              );
+              setManagementProjects(resManagementProjects.data);
+            }
+          } catch (projectErr) {
+            console.warn("プロジェクト管理データの取得に失敗:", projectErr);
+            // プロジェクト管理データの取得失敗は致命的エラーではないため、続行
+          }
+        }
       } catch (err: any) {
         console.error("データ取得に失敗:", err.response?.data || err);
       } finally {
@@ -215,7 +245,7 @@ const ProfilePage: FC<Props> = ({ id }) => {
     };
 
     fetchAll();
-  }, []);
+  }, [id]);
 
   const  ProfileVideoClick = (url: string) => {
     window.open(url, "_blank");
@@ -415,6 +445,7 @@ const ProfilePage: FC<Props> = ({ id }) => {
               </TabsContent>
 
               <TabsContent value="professional" className="space-y-8">
+              {/*
                 <div>
                   <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
                     <Code className="h-6 w-6" />
@@ -457,39 +488,89 @@ const ProfilePage: FC<Props> = ({ id }) => {
                     </div>
                   ))}
                 </div>
+              */}
 
                 <div>
                   <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
                     <FolderKanban className="h-6 w-6" />
                     参画プロジェクト
                   </h2>
-                  {parseProjectInfo().map((projectInfo, idx) => (
-                    <div className="space-y-4  gap-3" key = {idx}>
-                      <Card className="border-slate-200" >
-                        <CardContent className="p-4">
-                          <div className="flex justify-between items-start mb-2">
-                            <h3 className="font-semibold">{projectInfo.project ?? "不明"}</h3>
-                            <Badge>{projectInfo.start_date ?? "不明"} - {projectInfo.end_date ?? "不明"}</Badge>
-                          </div>
-                          {projectInfo && projectInfo.comment && (
-                            <p className="text-sm text-slate-600 mb-2">
-                              {projectInfo.comment.split('\n').map((line, i) => (
-                                  <li key={i}>{line}</li>
-                                ))}
-                            </p>
-                          )}
-                          {projectInfo.skill && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {projectInfo.skill.split('\\').map((skill, skillIndex) => (
-                                <Badge variant="outline" className="text-xs" key={skillIndex}>{skill.trim()  ?? "None"}</Badge>
-                              ))}
+                  {managementProjects.length > 0 ? (
+                    managementProjects.map((project, idx) => (
+                      <div className="space-y-4 gap-3" key={idx}>
+                        <Card className="border-blue-200 bg-blue-50">
+                          <CardContent className="p-4">
+                            <div className="flex justify-between items-start mb-2">
+                              <h3 className="font-semibold text-blue-900">{project.name}</h3>
+                              <Badge className="bg-blue-500">
+                                {project.start_date ?? "不明"} - {project.end_date ?? "不明"}
+                              </Badge>
                             </div>
-                          )}
 
-                        </CardContent>
-                      </Card>
+                            <div className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-sm text-slate-600 mb-3">
+                              <p className="font-medium text-slate-700">業界分類:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {project.industry_categories && Array.isArray(project.industry_categories)
+                                  ? project.industry_categories.map((category, catIndex) => (
+                                      <Badge key={catIndex} variant="outline" className="text-xs">
+                                        {category}
+                                      </Badge>
+                                    ))
+                                  : project.industry_categories
+                                    ? <span>{JSON.stringify(project.industry_categories)}</span>
+                                    : "情報なし"
+                                }
+                              </div>
+
+                              <p className="font-medium text-slate-700">プロジェクト種別:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {project.type_categories && Array.isArray(project.type_categories)
+                                  ? project.type_categories.map((type, typeIndex) => (
+                                      <Badge key={typeIndex} variant="outline" className="text-xs">
+                                        {type}
+                                      </Badge>
+                                    ))
+                                  : project.type_categories
+                                    ? <span>{JSON.stringify(project.type_categories)}</span>
+                                    : "情報なし"
+                                }
+                              </div>
+                            </div>
+
+                            {/* このプロジェクトのチームメンバー表示 */}
+                            {projectMembers
+                              .filter(member => member.project_id === project.id)
+                              .map(member => (
+                                <div key={member.project_id} className="mt-2">
+                                  <p className="text-xs text-slate-500">チームメンバー:</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {member.member_names.split(',').map((name, nameIndex) => (
+                                      <Badge
+                                        key={nameIndex}
+                                        variant="outline"
+                                        className={`text-xs ${
+                                          name.trim() === employees?.name
+                                            ? 'bg-yellow-200 border-yellow-400'
+                                            : ''
+                                        }`}
+                                      >
+                                        {name.trim()}
+                                      </Badge>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))
+                            }
+                          </CardContent>
+                        </Card>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center p-8 text-slate-500">
+                      <FolderKanban className="h-12 w-12 mx-auto mb-4 text-slate-300" />
+                      <p>参画プロジェクト情報が見つかりませんでした</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </TabsContent>
 
@@ -535,7 +616,7 @@ const ProfilePage: FC<Props> = ({ id }) => {
                       <div className="flex items-start gap-3">
                         <Users className="h-5 w-5 text-slate-500 mt-0.5" />
                         <div>
-                          <p className="text-sm text-slate-500">家族構成</p>
+                          <p className="text-sm text-slate-500">実家家族構成</p>
                           <p className="font-medium">{privateInfo?.family_structure}</p>
                         </div>
                       </div>

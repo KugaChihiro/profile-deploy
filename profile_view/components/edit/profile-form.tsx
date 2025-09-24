@@ -681,6 +681,15 @@ const ProfileForm: FC<Props> = ({ id }) => {
 
                   <TabsContent value="professional" className="space-y-6 mt-0">
                     <div>
+                      <a
+                        href="https://black-sea-021879300.1.azurestaticapps.net/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-block px-6 py-2 bg-gray-500 text-white rounded hover:bg-gray-700 transition"
+                      >
+                        プロジェクト管理ツールへ →
+                      </a>
+                      { /*
                       <div className="space-y-4" >
                         <h2 className="text-xl font-semibold">スキル</h2>
                         <div className="flex flex-wrap gap-2 mb-4">
@@ -721,14 +730,18 @@ const ProfileForm: FC<Props> = ({ id }) => {
                               <FormField control={form.control} name={`project_info.${index}.start_date`} render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>開始日</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button disabled={isLoading} variant={"outline"} className={`w-[97%] m-2 pl-3 text-left font-normal ${!field.value ? "text-muted-foreground" : ""}`}>{field.value ? field.value : <span>開始日を選択</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value ? new Date(field.value) : undefined} onSelect={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : undefined)} initialFocus captionLayout="dropdown" fromYear={1900} toYear={new Date().getFullYear()} classNames={{caption_label: "hidden",caption_dropdowns: "flex gap-2 justify-center",dropdown: "border px-2 py-1 rounded-md text-sm",dropdown_year: "bg-white",dropdown_month: "bg-white"}}/></PopoverContent></Popover><FormMessage /></FormItem> )} />
                               <FormField control={form.control} name={`project_info.${index}.end_date`} render={({ field }) => ( <FormItem className="flex flex-col"><FormLabel>終了日</FormLabel><Popover><PopoverTrigger asChild><FormControl><Button disabled={isLoading} variant={"outline"} className={`w-[97%] m-2 pl-3 text-left font-normal ${!field.value ? "text-muted-foreground" : ""}`}>{field.value ? field.value : <span>終了日を選択</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value ? new Date(field.value) : undefined} onSelect={(date) => field.onChange(date ? format(date, 'yyyy-MM-dd') : undefined)} initialFocus captionLayout="dropdown" fromYear={1900} toYear={new Date().getFullYear()} classNames={{caption_label: "hidden",caption_dropdowns: "flex gap-2 justify-center",dropdown: "border px-2 py-1 rounded-md text-sm",dropdown_year: "bg-white",dropdown_month: "bg-white"}}/></PopoverContent></Popover><FormMessage /></FormItem> )} />
                             </div>
+                            <div className="mb-4"><FormField control={form.control} name={`project_info.${index}.end_client_industry`} render={({ field }) => ( <FormItem><FormLabel>エンドクライアント業界分類</FormLabel><FormControl><Input readOnly={isLoading} placeholder="エンドクライアント業界分類を入力" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} /></div>
+                            <div className="mb-4"><FormField control={form.control} name={`project_info.${index}.project_purpose`} render={({ field }) => ( <FormItem><FormLabel>プロジェクト目的分類</FormLabel><FormControl><Input readOnly={isLoading} placeholder="プロジェクト目的分類" {...field} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} /></div>
                             <FormField control={form.control} name={`project_info.${index}.comment`} render={({ field }) => ( <FormItem className="mb-4"><FormLabel>補足</FormLabel><FormControl><Textarea readOnly={isLoading} placeholder="プロジェクトに関する補足的情報を記入" {...field} rows={3} value={field.value ?? ""} /></FormControl><FormMessage /></FormItem> )} />
                             <FormField control={form.control} name={`project_info.${index}.skill`} render={({ field }) => (<FormItem><FormLabel>獲得スキル</FormLabel><FormControl><Input readOnly={isLoading} placeholder="獲得スキルを記入 / 記入例 : スキル1,スキル2" {...field} value={field.value ?? ""} onChange={(e) => { const original = e.target.value; const replaced = original.replace(/[・\/、\-\\\s\u3000]/g, ","); if (original !== replaced && !window.__delimiterAlertShown) { alert("他の区切り文字（スペース スラッシュ バックスラッシュ 読点 中点 ハイフン 等）はカンマ（,）に自動変換されます。"); window.__delimiterAlertShown = true; } field.onChange(replaced); }} /></FormControl><FormMessage /></FormItem>)}/>
                           </div>
                         ))}
                         <Button disabled={isLoading} type="button" variant="outline" className="w-full" onClick={addProject}><Plus className="mr-2 h-4 w-4" /> プロジェクトを追加</Button>
                       </div>
+                    */}
                     </div>
                   </TabsContent>
+
 
                   <TabsContent value="personal" className="space-y-6 mt-0">
                     <div className="space-y-4">
