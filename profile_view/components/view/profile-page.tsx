@@ -497,72 +497,77 @@ const ProfilePage: FC<Props> = ({ id }) => {
                   </h2>
                   {managementProjects.length > 0 ? (
                     managementProjects.map((project, idx) => (
-                      <div className="space-y-4 gap-3" key={idx}>
-                        <Card className="border-blue-200 bg-blue-50">
-                          <CardContent className="p-4">
-                            <div className="flex justify-between items-start mb-2">
-                              <h3 className="font-semibold text-blue-900">{project.name}</h3>
-                              <Badge className="bg-blue-500">
-                                {project.start_date ?? "不明"} - {project.end_date ?? "不明"}
-                              </Badge>
-                            </div>
-
-                            <div className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-sm text-slate-600 mb-3">
-                              <p className="font-medium text-slate-700">業界分類:</p>
-                              <div className="flex flex-wrap gap-1">
-                                {project.industry_categories && Array.isArray(project.industry_categories)
-                                  ? project.industry_categories.map((category, catIndex) => (
-                                      <Badge key={catIndex} variant="outline" className="text-xs">
-                                        {category}
-                                      </Badge>
-                                    ))
-                                  : project.industry_categories
-                                    ? <span>{JSON.stringify(project.industry_categories)}</span>
-                                    : "情報なし"
-                                }
+                      <div className="space-y-4 gap-3 mb-5" key={idx}>
+                        <Card 
+                          className="border-gray-200 bg-gray-50 hover:bg-gray-100 cursor-pointer"
+                          onClick={() => {
+                            window.open(`https://black-sea-021879300.1.azurestaticapps.net/${project.id}?tab=structure`, '_blank', 'noopener,noreferrer');
+                          }}
+                        >
+                            <CardContent className="p-4">
+                              <div className="flex justify-between items-start mb-2">
+                                <h3 className="font-semibold text-gray-900">{project.name}</h3>
+                                <Badge className="bg-gray-500">
+                                  {project.start_date ?? "不明"} - {project.end_date ?? "不明"}
+                                </Badge>
                               </div>
 
-                              <p className="font-medium text-slate-700">プロジェクト種別:</p>
-                              <div className="flex flex-wrap gap-1">
-                                {project.type_categories && Array.isArray(project.type_categories)
-                                  ? project.type_categories.map((type, typeIndex) => (
-                                      <Badge key={typeIndex} variant="outline" className="text-xs">
-                                        {type}
-                                      </Badge>
-                                    ))
-                                  : project.type_categories
-                                    ? <span>{JSON.stringify(project.type_categories)}</span>
-                                    : "情報なし"
-                                }
-                              </div>
-                            </div>
-
-                            {/* このプロジェクトのチームメンバー表示 */}
-                            {projectMembers
-                              .filter(member => member.project_id === project.id)
-                              .map(member => (
-                                <div key={member.project_id} className="mt-2">
-                                  <p className="text-xs text-slate-500">チームメンバー:</p>
-                                  <div className="flex flex-wrap gap-1">
-                                    {member.member_names.split(',').map((name, nameIndex) => (
-                                      <Badge
-                                        key={nameIndex}
-                                        variant="outline"
-                                        className={`text-xs ${
-                                          name.trim() === employees?.name
-                                            ? 'bg-yellow-200 border-yellow-400'
-                                            : ''
-                                        }`}
-                                      >
-                                        {name.trim()}
-                                      </Badge>
-                                    ))}
-                                  </div>
+                              <div className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-sm text-slate-600 mb-3">
+                                <p className="font-medium text-slate-700">業界分類:</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {project.industry_categories && Array.isArray(project.industry_categories)
+                                    ? project.industry_categories.map((category, catIndex) => (
+                                        <Badge key={catIndex} variant="outline" className="text-xs">
+                                          {category}
+                                        </Badge>
+                                      ))
+                                    : project.industry_categories
+                                      ? <span>{JSON.stringify(project.industry_categories)}</span>
+                                      : "情報なし"
+                                  }
                                 </div>
-                              ))
-                            }
-                          </CardContent>
-                        </Card>
+
+                                <p className="font-medium text-slate-700">プロジェクト種別:</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {project.type_categories && Array.isArray(project.type_categories)
+                                    ? project.type_categories.map((type, typeIndex) => (
+                                        <Badge key={typeIndex} variant="outline" className="text-xs">
+                                          {type}
+                                        </Badge>
+                                      ))
+                                    : project.type_categories
+                                      ? <span>{JSON.stringify(project.type_categories)}</span>
+                                      : "情報なし"
+                                  }
+                                </div>
+                              </div>
+
+                              {/* このプロジェクトのチームメンバー表示 */}
+                              {projectMembers
+                                .filter(member => member.project_id === project.id)
+                                .map(member => (
+                                  <div key={member.project_id} className="mt-2">
+                                    <p className="text-xs text-slate-500">チームメンバー:</p>
+                                    <div className="flex flex-wrap gap-1">
+                                      {member.member_names.split(',').map((name, nameIndex) => (
+                                        <Badge
+                                          key={nameIndex}
+                                          variant="outline"
+                                          className={`text-xs ${
+                                            name.trim() === employees?.name
+                                              ? 'bg-yellow-200 border-yellow-400'
+                                              : ''
+                                          }`}
+                                        >
+                                          {name.trim()}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))
+                              }
+                            </CardContent>
+                          </Card>
                       </div>
                     ))
                   ) : (
