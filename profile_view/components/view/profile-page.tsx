@@ -498,10 +498,30 @@ const ProfilePage: FC<Props> = ({ id }) => {
                   {managementProjects.length > 0 ? (
                     managementProjects.map((project, idx) => (
                       <div className="space-y-4 gap-3 mb-5" key={idx}>
-                        <Card 
+                        <Card
                           className="border-gray-200 bg-gray-50 hover:bg-gray-100 cursor-pointer"
                           onClick={() => {
-                            window.open(`https://black-sea-021879300.1.azurestaticapps.net/${project.id}?tab=structure`, '_blank', 'noopener,noreferrer');
+                            // デバッグ用のログを追加
+                            console.log('Project ID:', project.id);
+                            console.log('Project object:', project);
+
+                            // 開発環境かどうかを判定
+                            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+                            const targetUrl = `https://black-sea-021879300.1.azurestaticapps.net/${project.id}?tab=structure`;
+                            console.log('Target URL:', targetUrl);
+
+                            if (isLocalhost) {
+                              // ローカル開発環境では完全なURLで認証経由
+                              const authUrl = `https://black-sea-021879300.1.azurestaticapps.net/.auth/login/aad?post_login_redirect_uri=${encodeURIComponent(targetUrl)}`;
+                              console.log('Local Auth URL:', authUrl);
+                              window.open(authUrl, '_blank', 'noopener,noreferrer');
+                            } else {
+                              // 本番環境では相対パスで認証経由
+                              const authUrl = `/.auth/login/aad?post_login_redirect_uri=${encodeURIComponent(targetUrl)}`;
+                              console.log('Production Auth URL:', authUrl);
+                              window.open(authUrl, '_blank', 'noopener,noreferrer');
+                            }
                           }}
                         >
                             <CardContent className="p-4">
