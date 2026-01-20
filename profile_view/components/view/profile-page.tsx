@@ -1,50 +1,28 @@
 "use client"
 
-import { useState, useEffect, FC} from "react"
+import { useState, FC } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
-import { api } from "@/lib/api";
-import { EmployeeOut } from "@/types/employee";
-import { EmploymentHistoryOut} from "@/types/employment_history";
-import { ProjectInfoOut } from "@/types/project_info";
-import { InsightInfoOut } from "@/types/insight_info";
-import { SkillInfoOut } from "@/types/skill_info";
-import { PrivateInfoOut } from "@/types/private_info";
-import { RelatedInfoOut } from "@/types/related_info";
-import { ProjectMember, ProjectInfo } from "@/types/project_management";
+import { useProfileData } from "@/hooks/use-profile-data";
+import {
+  parseEmploymentHistory,
+  parseProjectInfo,
+  parseInsightInfo,
+  parseSkillInfo,
+  parseSeminarInfo,
+} from "@/lib/profile-utils";
+import { BasicTab } from "@/components/view/tabs/BasicTab";
+import { ProjectTab } from "@/components/view/tabs/ProjectTab";
+import { PrivateTab } from "@/components/view/tabs/PrivateTab";
+import { RelatedInfoTab } from "@/components/view/tabs/RelatedInfoTab";
 import {
   User,
   Briefcase,
   Heart,
   Film,
-  GraduationCap,
-  MapPin,
-  Calendar,
-  Code,
-  Lightbulb,
-  FolderKanban,
-  Users,
-  Building,
-  Music,
-  Dumbbell,
-  Coffee,
-  CircleUser,
-  Pizza,
-  Palmtree,
-  Tv,
-  Mic,
-  Smile,
-  ToyBrick,
-  Droplet,
-  Tag,
-  Puzzle,
-  Carrot,
-  LinkIcon,
   Loader2,
-  History
 } from "lucide-react"
 
 
@@ -55,17 +33,21 @@ type Props = {
 
 const ProfilePage: FC<Props> = ({ id }) => {
   const [activeTab, setActiveTab] = useState("basic")
-  const [employees, setEmployees] = useState<EmployeeOut | null>(null);
-  const [employmentHistory, setEmploymentHistory] = useState<EmploymentHistoryOut | null>(null);
-  const [projectInfo, setProjectInfo] = useState<ProjectInfoOut | null>(null);
-  const [insightInfo, setInsightInfo] = useState<InsightInfoOut | null>(null);
-  const [skillInfo, setSkillInfo] = useState<SkillInfoOut | null>(null);
-  const [privateInfo, setPrivateInfo] = useState<PrivateInfoOut | null>(null);
-  const [relatedInfo, setRelatedInfo] = useState<RelatedInfoOut | null>(null);
-  const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
-  const [managementProjects, setManagementProjects] = useState<ProjectInfo[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter()
+
+  // カスタムフックでデータ取得
+  const {
+    employees,
+    employmentHistory,
+    projectInfo,
+    insightInfo,
+    skillInfo,
+    privateInfo,
+    relatedInfo,
+    projectMembers,
+    managementProjects,
+    isLoading,
+  } = useProfileData(id);
 
   const goTOEdition = (id: number) => {
     router.push(`/${id}/edit`);
@@ -75,183 +57,11 @@ const ProfilePage: FC<Props> = ({ id }) => {
     router.push("../")
   }
 
-  type EmploymentHistoryUnit = {
-    company_name: string | null;
-    job_title?: string | null;
-    start_date?: string | null;
-    end_date?: string | null;
-    description?: string | null;
-    knowledge?: string | null;
-  };
-
-  const parseEmploymentHistory = (): EmploymentHistoryUnit[] => {
-    const names = employmentHistory && (employmentHistory.company_name?.split(",") ?? []);
-    const titles = employmentHistory && (employmentHistory.job_title?.split(",") ?? []);
-    const s_dates = employmentHistory && (employmentHistory.start_date?.split(",") ?? []);
-    const e_dates = employmentHistory && (employmentHistory.end_date?.split(",") ?? []);
-    const descriptions = employmentHistory && (employmentHistory.description?.split(",") ?? []);
-    const knowledges = employmentHistory && (employmentHistory.knowledge?.split(",") ?? []);
-
-    if (!names || names.length === 0) return [];
-
-    return names.map((name, index) => ({
-      company_name: name?.trim() || null,
-      job_title: titles?.[index]?.trim() || null,
-      start_date: s_dates?.[index]?.trim() || null,
-      end_date: e_dates?.[index]?.trim() || null,
-      description: descriptions?.[index]?.trim() || null,
-      knowledge: knowledges?.[index]?.trim() || null,
-    }));
-  };
-
-  type ProjectUnit = {
-    project: string | null;
-    skill?: string | null;
-    comment?: string | null;
-    start_date?: string | null;
-    end_date?: string | null;
-  };
-
-  const parseProjectInfo = (): ProjectUnit[] => {
-    const projects = projectInfo && (projectInfo.project?.split(",") ?? []);
-    const skills = projectInfo && (projectInfo.skill?.split(",") ?? []);
-    const comments = projectInfo && (projectInfo.comment?.split(",") ?? []);
-    const start_dates = projectInfo && (projectInfo.start_date?.split(",") ?? []);
-    const end_dates = projectInfo && (projectInfo.end_date?.split(",") ?? []);
-
-    if (!projects || projects.length === 0) return [];
-
-    return projects.map((proj, index) => ({
-      project: proj?.trim() || null,
-      skill: skills?.[index]?.trim() || null,
-      comment: comments?.[index]?.trim() || null,
-      start_date: start_dates?.[index]?.trim() || null,
-      end_date: end_dates?.[index]?.trim() || null,
-    }));
-  };
-
-  type InsightUnit = {
-    insight: string | null;
-    skill?: string | null;
-    comment?: string | null;
-  };
-
-  const parseInsightInfo = (): InsightUnit[] => {
-    const insights = insightInfo && (insightInfo.insight?.split(",") ?? []);
-    const skills = insightInfo && (insightInfo.skill?.split(",") ?? []);
-    const comments = insightInfo && (insightInfo.comment?.split(",") ?? []);
-
-    if (!insights || insights.length === 0) return [];
-
-    return insights.map((insight, index) => ({
-      insight: insight?.trim() || null,
-      skill: skills?.[index]?.trim() || null,
-      comment: comments?.[index]?.trim() || null,
-    }));
-  };
-
-
-  type SkillUnit = {
-    skill: string | null;
-  };
-
-  const parseSkillInfo = (): SkillUnit[] => {
-    const skills = skillInfo && (skillInfo.skill?.split(",") ?? []);
-
-    if (!skills || skills.length === 0) return [];
-
-    return skills.map((skill) => ({
-      skill: skill?.trim() || null,
-    }));
-  };
-
-  type VideoUnit = {
-    video_url: string | undefined;
-    thumbnail_url:string | undefined;
-  };
-
-  const parseSeminarInfo = (): VideoUnit[] => {
-    const video_url = relatedInfo && (relatedInfo.seminar_videos?.split(",") ?? []);
-    const thumbnail_url = relatedInfo && (relatedInfo.seminar_thumbnail_url?.split(",") ?? []);
-
-    if (!video_url || video_url.length === 0) return [];
-
-    return video_url.map((video_url, index) => ({
-      video_url: video_url?.trim() || undefined,
-      thumbnail_url : thumbnail_url?.[index]?.trim() || undefined,
-    }));
-  };
-
-  useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        const [
-          resEmployee,
-          resEmployment,
-          resProject,
-          resInsight,
-          resSkill,
-          resPrivate,
-          resRelated
-        ] = await Promise.all([
-          api.get(`/employees/${id}`),
-          api.get(`/employment_history/${id}`),
-          api.get(`/project_info/${id}`),
-          api.get(`/insight_info/${id}`),
-          api.get(`/skill_info/${id}`),
-          api.get(`/private_info/${id}`),
-          api.get(`/related_info/${id}`),
-        ]);
-
-        setEmployees(resEmployee.data);
-        setEmploymentHistory(resEmployment.data);
-        setProjectInfo(resProject.data);
-        setInsightInfo(resInsight.data);
-        setSkillInfo(resSkill.data);
-        setPrivateInfo(resPrivate.data);
-        setRelatedInfo(resRelated.data);
-
-        // 従業員名が取得できたら、プロジェクト管理データベースからも情報を取得
-        if (resEmployee.data?.name) {
-          try {
-            // 1. チームメンバー情報を取得
-            const resTeamMembers = await api.get(
-              `/project-management/team-members/${resEmployee.data.name}`
-            );
-            setProjectMembers(resTeamMembers.data);
-
-            // 2. プロジェクトIDを抽出
-            const projectIds = resTeamMembers.data.map(
-              (member: ProjectMember) => member.project_id
-            );
-
-            if (projectIds.length > 0) {
-              // 3. プロジェクト情報を取得
-              const resManagementProjects = await api.get(
-                `/project-management/projects?project_ids=${projectIds.join(',')}`
-              );
-              setManagementProjects(resManagementProjects.data);
-            }
-          } catch (projectErr) {
-            console.warn("プロジェクト管理データの取得に失敗:", projectErr);
-            // プロジェクト管理データの取得失敗は致命的エラーではないため、続行
-          }
-        }
-      } catch (err: any) {
-        console.error("データ取得に失敗:", err.response?.data || err);
-      } finally {
-        setIsLoading(false); // 全て終わったら解除
-      }
-    };
-
-    fetchAll();
-  }, [id]);
-
-  const  ProfileVideoClick = (url: string) => {
+  const ProfileVideoClick = (url: string) => {
     window.open(url, "_blank");
   }
 
-  const  SeminarVideoClick = (url: string) => {
+  const SeminarVideoClick = (url: string) => {
     window.open(url, "_blank");
   }
 
@@ -306,589 +116,31 @@ const ProfilePage: FC<Props> = ({ id }) => {
               </TabsList>
 
               <TabsContent value="basic" className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div>
-                    <h2 className="text-2xl font-bold mb-4">プロフィール</h2>
-                    <div className="space-y-4">
-                      <div className="flex items-start gap-3">
-                        <User className="h-5 w-5 text-slate-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">氏名</p>
-                          {employees && (<p className="font-medium">{employees.name}</p>)}
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <User className="h-5 w-5 text-slate-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">フリガナ</p>
-                          {employees && (<p className="font-medium">{employees.kana}</p>)}
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <Calendar className="h-5 w-5 text-slate-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">生年月日</p>
-                          {employees && (<p className="font-medium">{employees.birthdate}</p>)}
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <MapPin className="h-5 w-5 text-slate-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">出身地</p>
-                          {employees && (<p className="font-medium">{employees.hometown}</p>)}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h2 className="text-2xl font-bold mb-4">学歴</h2>
-                    <div className="space-y-4">
-                      {/* 小学校 */}
-                      <div className="flex items-start gap-3">
-                        <GraduationCap className="h-5 w-5 text-slate-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">小学校</p>
-                          {employees && <p className="font-medium">{employees.elementary_school}</p>}
-                        </div>
-                      </div>
-
-                      {/* 中学校 */}
-                      <div className="flex items-start gap-3">
-                        <GraduationCap className="h-5 w-5 text-slate-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">中学校</p>
-                          {employees && <p className="font-medium">{employees.junior_high_school}</p>}
-                        </div>
-                      </div>
-
-                      {/* 高等学校 */}
-                      <div className="flex items-start gap-3">
-                        <GraduationCap className="h-5 w-5 text-slate-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">高等学校</p>
-                          {employees && <p className="font-medium">{employees.high_school}</p>}
-                        </div>
-                      </div>
-
-                      {/* 大学 */}
-                      <div className="flex items-start gap-3">
-                        <GraduationCap className="h-5 w-5 text-slate-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">大学</p>
-                          {employees && (
-                            <p className="font-medium">
-                              {employees.university} {employees.faculty}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* 大学院 */}
-                      {employees && employees.graduate_school && (
-                        <div className="flex items-start gap-3">
-                          <GraduationCap className="h-5 w-5 text-slate-500 mt-0.5" />
-                          <div>
-                            <p className="text-sm text-slate-500">大学院</p>
-                            <p className="font-medium">
-                              {employees.graduate_school} {employees.major}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-
-                <div>
-                  <h2 className="text-2xl font-bold mb-4 mt-10">職歴</h2>
-                  <div className="space-y-6">
-                    {parseEmploymentHistory().map((employmentHistory, idx) => (
-                      <div key={idx} className="bg-slate-50 p-4 rounded-lg">
-                        <div className="flex items-center justify-between mb-2">
-                          <h3 className="font-semibold">{employmentHistory.company_name?? 'なし'}</h3>
-                          <p className="text-sm text-slate-500">
-                            {employmentHistory.start_date ?? '開始不明'} - {employmentHistory.end_date ?? '終了不明'}
-                          </p>
-                        </div>
-                        <p className="text-slate-700 mb-3">{employmentHistory.job_title ?? '職種不明'}</p>
-
-                        {employmentHistory.description && (
-                          <>
-                            <p className="text-sm text-slate-600 mb-2">業務内容:</p>
-                            <ul className="list-disc list-inside text-sm text-slate-600 mb-3 ml-2">
-                              {employmentHistory.description.split('\n').map((line, i) => (
-                                <li key={i}>{line}</li>
-                              ))}
-                            </ul>
-                          </>
-                        )}
-
-                        {employmentHistory.knowledge && (
-                          <>
-                            <p className="text-sm text-slate-600 mb-2">獲得した知見・強み:</p>
-                            <ul className="list-disc list-inside text-sm text-slate-600 ml-2">
-                              {employmentHistory.knowledge.split('\n').map((line, i) => (
-                                <li key={i}>{line}</li>
-                              ))}
-                            </ul>
-                          </>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <BasicTab
+                  employees={employees}
+                  employmentHistory={parseEmploymentHistory(employmentHistory)}
+                />
               </TabsContent>
 
               <TabsContent value="professional" className="space-y-8">
-              {/*
-                <div>
-                  <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                    <Code className="h-6 w-6" />
-                    獲得スキル
-                  </h2>
-                  <div className = "flex gap-5 flex-wrap">
-                    {parseSkillInfo().map((skillInfo, idx) => (
-                      <div className="flex flex-wrap gap-2 mb-6"  key={idx} >
-                        <Badge className="bg-blue-500">{skillInfo.skill ?? "None"}</Badge>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                    <Lightbulb className="h-6 w-6" />
-                    獲得知見
-                  </h2>
-                  {parseInsightInfo().map((insightInfo, idx) => (
-                    <div className="grid grid-cols-1 gap-4" key = {idx}>
-                      <Card className="border-slate-200">
-                        <CardContent className="p-4">
-                          <h3 className="font-semibold mb-2">{insightInfo.insight ?? "不明"}</h3>
-                          {insightInfo && insightInfo.comment && (
-                          <p className="text-sm text-slate-600">
-                            {insightInfo.comment.split('\n').map((line, i) => (
-                                <li key={i}>{line}</li>
-                              ))}
-                          </p>)}
-                          {insightInfo.skill && (
-                            <div className="flex flex-wrap gap-1 mt-2">
-                              {insightInfo.skill.split('\\').map((skill, skillIndex) => (
-                                <Badge variant="outline" className="text-xs" key={skillIndex}>{skill.trim()  ?? "None"}</Badge>
-                              ))}
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </div>
-                  ))}
-                </div>
-              */}
-
-                <div>
-                  <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                    <FolderKanban className="h-6 w-6" />
-                    参画プロジェクト
-                  </h2>
-                  {managementProjects.length > 0 ? (
-                    managementProjects.map((project, idx) => (
-                      <div className="space-y-4 gap-3 mb-5" key={idx}>
-                        <Card
-                          className="border-gray-200 bg-gray-50 hover:bg-gray-100 cursor-pointer"
-                          onClick={() => {
-                            // デバッグ用のログを追加
-                            console.log('Project ID:', project.id);
-                            console.log('Project object:', project);
-
-                            // 常に完全なURLで認証経由
-                            const targetUrl = `https://black-sea-021879300.1.azurestaticapps.net/${project.id}?tab=structure`;
-                            console.log('Target URL:', targetUrl);
-
-                            const authUrl = `https://black-sea-021879300.1.azurestaticapps.net/.auth/login/aad?post_login_redirect_uri=${encodeURIComponent(targetUrl)}`;
-                            console.log('Auth URL:', authUrl);
-                            window.open(authUrl, '_blank', 'noopener,noreferrer');
-                          }}
-                        >
-                            <CardContent className="p-4">
-                              <div className="flex justify-between items-start mb-2">
-                                <h3 className="font-semibold text-gray-900">{project.name}</h3>
-                                <Badge className="bg-gray-500">
-                                  {project.start_date ?? "不明"} - {project.end_date ?? "不明"}
-                                </Badge>
-                              </div>
-
-                              <div className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1 text-sm text-slate-600 mb-3">
-                                <p className="font-medium text-slate-700">業界分類:</p>
-                                <div className="flex flex-wrap gap-1">
-                                  {project.industry_categories && Array.isArray(project.industry_categories)
-                                    ? project.industry_categories.map((category, catIndex) => (
-                                        <Badge key={catIndex} variant="outline" className="text-xs">
-                                          {category}
-                                        </Badge>
-                                      ))
-                                    : project.industry_categories
-                                      ? <span>{JSON.stringify(project.industry_categories)}</span>
-                                      : "情報なし"
-                                  }
-                                </div>
-
-                                <p className="font-medium text-slate-700">プロジェクト種別:</p>
-                                <div className="flex flex-wrap gap-1">
-                                  {project.type_categories && Array.isArray(project.type_categories)
-                                    ? project.type_categories.map((type, typeIndex) => (
-                                        <Badge key={typeIndex} variant="outline" className="text-xs">
-                                          {type}
-                                        </Badge>
-                                      ))
-                                    : project.type_categories
-                                      ? <span>{JSON.stringify(project.type_categories)}</span>
-                                      : "情報なし"
-                                  }
-                                </div>
-                              </div>
-
-                              {/* このプロジェクトのチームメンバー表示 */}
-                              {projectMembers
-                                .filter(member => member.project_id === project.id)
-                                .map(member => (
-                                  <div key={member.project_id} className="mt-2">
-                                    <p className="text-xs text-slate-500">チームメンバー:</p>
-                                    <div className="flex flex-wrap gap-1">
-                                      {member.member_names.split(',').map((name, nameIndex) => (
-                                        <Badge
-                                          key={nameIndex}
-                                          variant="outline"
-                                          className={`text-xs ${
-                                            name.trim() === employees?.name
-                                              ? 'bg-yellow-200 border-yellow-400'
-                                              : ''
-                                          }`}
-                                        >
-                                          {name.trim()}
-                                        </Badge>
-                                      ))}
-                                    </div>
-                                  </div>
-                                ))
-                              }
-                            </CardContent>
-                          </Card>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center p-8 text-slate-500">
-                      <FolderKanban className="h-12 w-12 mx-auto mb-4 text-slate-300" />
-                      <p>参画プロジェクト情報が見つかりませんでした</p>
-                    </div>
-                  )}
-                </div>
+                <ProjectTab
+                  managementProjects={managementProjects}
+                  projectMembers={projectMembers}
+                  employees={employees}
+                />
               </TabsContent>
 
               <TabsContent value="personal" className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div>
-                    <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                      <User className="h-6 w-6" />
-                       個人
-                    </h2>
-                    <div className="space-y-4">
-                      <div className="flex items-start gap-3">
-                        <Tag className="h-5 w-5 text-slate-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">ニックネーム</p>
-                          <p className="font-medium">{privateInfo?.nickname}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <Droplet className="h-5 w-5 text-slate-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">血液型</p>
-                          <p className="font-medium">{privateInfo?.blood_type}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <Puzzle className="h-5 w-5 text-slate-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">MBTI</p>
-                          <p className="font-medium">{privateInfo?.mbti}</p>
-                        </div>
-                      </div>
-
-                    </div>
-
-                    <h2 className="text-2xl font-bold mt-8 mb-4 flex items-center gap-2">
-                      <Users className="h-6 w-6" />
-                      家族・背景
-                    </h2>
-                    <div className="space-y-4">
-                      <div className="flex items-start gap-3">
-                        <Users className="h-5 w-5 text-slate-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">実家家族構成</p>
-                          <p className="font-medium">{privateInfo?.family_structure}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <Building className="h-5 w-5 text-slate-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">親の職業</p>
-                          {privateInfo?.father_job && (<p className="font-medium">父：{privateInfo?.father_job}</p>)}
-                          {privateInfo?.mother_job && (<p className="font-medium">母：{privateInfo?.mother_job}</p>)}
-                        </div>
-                      </div>
-                    </div>
-
-                    <h2 className="text-2xl font-bold mt-8 mb-4 flex items-center gap-2">
-                      <History className="h-6 w-6" />
-                      活動歴
-                    </h2>
-
-                        <div className="space-y-4">
-                          <div className="flex items-start gap-3">
-                            <Music className="h-5 w-5 text-slate-500 mt-0.5" />
-                            <div>
-                              <p className="text-sm text-slate-500">習い事</p>
-                                {privateInfo?.lessons
-                                  ?.split(/[,\/\\・\-、]/)
-                                  .map((item, index) => (
-                                    <p className="font-medium" key={index}>{item.trim()}</p>
-                                  ))}
-                            </div>
-                          </div>
-
-                          <div className="flex items-start gap-3">
-                            <Dumbbell className="h-5 w-5 text-slate-500 mt-0.5" />
-                            <div>
-                              <p className="text-sm text-slate-500">部活</p>
-                                {privateInfo?.club_activities?.split(/[,\/\\・\-、]/).map((item, index) => (
-                                  <p className="font-medium" key={index}>{item.trim()}</p>
-                                ))}
-                            </div>
-                          </div>
-                          <div className="flex items-start gap-3">
-                            <Coffee className="h-5 w-5 text-slate-500 mt-0.5" />
-                            <div>
-                              <p className="text-sm text-slate-500">アルバイト</p>
-                                {privateInfo?.jobs?.split(/[,\/\\・\-、]/).map((item, index) => (
-                                  <p className="font-medium" key={index}>{item.trim()}</p>
-                                ))}
-                            </div>
-                          </div>
-                        <div className="flex items-start gap-3">
-                          <CircleUser className="h-5 w-5 text-slate-500 mt-0.5" />
-                          <div>
-                            <p className="text-sm text-slate-500">サークル</p>
-                              {privateInfo?.circles?.split(/[,\/\\・\-、]/).map((item, index) => (
-                                  <p className="font-medium" key={index}>{item.trim()}</p>
-                              ))}
-                          </div>
-                        </div>
-                        {privateInfo?.activities_free && (
-                          <div className="flex items-start gap-3">
-                            <History className="h-5 w-5 text-slate-500 mt-0.5" />
-                            <div>
-                              <p className="text-sm text-slate-500">その他の活動(自由記述)</p>
-                              <p className="font-medium">{privateInfo?.activities_free}</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                  </div>
-
-                  <div>
-                    <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                      <Heart className="h-6 w-6" />
-                      趣味・好み
-                    </h2>
-                    <div className="space-y-4">
-                      <div className="flex items-start gap-3">
-                        <Heart className="h-5 w-5 text-slate-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">趣味</p>
-                          {privateInfo?.hobbies?.split(/[,\/\\・\-、]/).map((item, index) => (
-                            <p className="font-medium" key={index}>{item.trim()}</p>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <Pizza className="h-5 w-5 text-slate-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">好きな食べ物</p>
-                            {privateInfo?.favorite_foods?.split(/[,\/\\・\-、]/).map((item, index) => (
-                              <p className="font-medium" key={index}>{item.trim()}</p>
-                            ))}
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <Carrot className="h-5 w-5 text-slate-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">嫌いな食べ物</p>
-                          {privateInfo?.disliked_foods?.split(/[,\/\\・\-、]/).map((item, index) => (
-                            <p className="font-medium" key={index}>{item.trim()}</p>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <Palmtree className="h-5 w-5 text-slate-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">休日の過ごし方</p>
-                            {privateInfo?.holiday_activities?.split(/[,\/\\・\-、]/).map((item, index) => (
-                              <p className="font-medium" key={index}>{item.trim()}</p>
-                            ))}
-                        </div>
-                      </div>
-
-                      <div className="flex items-start gap-3">
-                        <Tv className="h-5 w-5 text-slate-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">好きな芸能人</p>
-                            {privateInfo?.favorite_celebrities?.split(/[,\/\\・\-、]/).map((item, index) => (
-                              <p className="font-medium" key={index}>{item.trim()}</p>
-                            ))}
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <ToyBrick className="h-5 w-5 text-slate-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">好きなキャラクター</p>
-                            {privateInfo?.favorite_characters?.split(/[,\/\\・\-、]/).map((item, index) => (
-                              <p className="font-medium" key={index}>{item.trim()}</p>
-                            ))}
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <Mic className="h-5 w-5 text-slate-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">好きなアーティスト</p>
-                            {privateInfo?.favorite_artists?.split(/[,\/\\・\-、]/).map((item, index) => (
-                              <p className="font-medium" key={index}>{item.trim()}</p>
-                            ))}
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <Smile className="h-5 w-5 text-slate-500 mt-0.5" />
-                        <div>
-                          <p className="text-sm text-slate-500">好きなお笑い芸人</p>
-                            {privateInfo?.favorite_comedians?.split(/[,\/\\・\-、]/).map((item, index) => (
-                              <p className="font-medium" key={index}>{item.trim()}</p>
-                            ))}
-                        </div>
-                      </div>
-                      {privateInfo?.favorite_things_free && (
-                        <div className="flex items-start gap-3">
-                          <Heart className="h-5 w-5 text-slate-500 mt-0.5" />
-                          <div>
-                            <p className="text-sm text-slate-500">その他の好きなもの・こと（自由記述）</p>
-                            <p className="font-medium">{privateInfo?.favorite_things_free}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                <PrivateTab privateInfo={privateInfo} />
               </TabsContent>
 
               <TabsContent value="media" className="space-y-8">
-                <div>
-                  <h2 className="text-2xl font-bold mb-4">プロフィール動画</h2>
-                  {relatedInfo?.profile_video? (
-                    <>
-                      <div className="relative aspect-video bg-black rounded-lg overflow-hidden group cursor-pointer" onClick={() => ProfileVideoClick(relatedInfo?.profile_video ?? "")}>
-                        <video
-                          className="w-full h-full object-cover"
-                          controls
-                          src={relatedInfo?.profile_video  || undefined}
-                          poster={relatedInfo?.profile_thumbnail_url || undefined}
-                        >
-                        </video>
-                        <div className="absolute inset-0 bg-white/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300  pointer-events-none flex items-center justify-center">
-                            <p className="text-white text-sm sm:text-base px-4 text-center pointer-events-none">
-                              動画が表示されない場合はここをクリック
-                            </p>
-                        </div>
-                      </div>
-                      <div className="mt-4 p-3 bg-gray-100 rounded-md border-gray-300 text-gray-700 break-all select-text cursor-text flex gap-2">
-                        <LinkIcon/>
-                        <a
-                          href={relatedInfo?.profile_video}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm hover:text-gray-300"
-                        >
-                          {relatedInfo?.profile_video}
-                        </a>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="aspect-video bg-slate-100 rounded-lg flex items-center justify-center">
-                      <div className="text-center p-6">
-                        <Film className="h-12 w-12 mx-auto text-slate-400 mb-2" />
-                        <p className="text-slate-500">プロフィール動画がここに表示されます</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <h2 className="text-2xl font-bold mb-4">セミナー動画</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {parseSeminarInfo().map((item, index) => (
-                      <div className = "flex flex-col"  key={index}>
-                        {item ? (
-                          <div className="relative aspect-video bg-black rounded-lg overflow-hidden group cursor-pointer" onClick={() => SeminarVideoClick(item.video_url ?? "")}>
-                            <video
-                              className="w-full h-full object-cover"
-                              controls
-                              src={item.video_url  || undefined}
-                              poster={item?.thumbnail_url || undefined}
-                            >
-                            </video>
-                            <div className="absolute inset-0 bg-white/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300  pointer-events-none flex items-center justify-center">
-                                <p className="text-white text-sm sm:text-base px-4 text-center pointer-events-none">
-                                  動画が表示されない場合はここをクリック
-                                </p>
-                            </div>
-                          </div>
-                        ):(
-                          <div className="w-full h-full object-cover aspect-video bg-slate-100 rounded-lg flex items-center justify-center">
-                            <div className="text-center p-6">
-                              <Film className="h-12 w-12 mx-auto text-slate-400 mb-2" />
-                              <p className="text-slate-500">セミナー動画がここに表示されます</p>
-                            </div>
-                          </div>
-                        )}
-
-                        {item ? (
-                          <div className="mt-4 p-3 bg-gray-100 rounded-md border-gray-300 text-gray-700 break-all select-text cursor-text flex gap-2 items-center">
-                            <LinkIcon/>
-                            <a
-                              href={item.video_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm hover:text-gray-300"
-                            >
-                              {item.video_url}
-                            </a>
-                          </div>
-                          ) : (
-                            <span className="text-s"/>
-                          )
-                        }
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <RelatedInfoTab
+                  relatedInfo={relatedInfo}
+                  seminarVideos={parseSeminarInfo(relatedInfo)}
+                  onProfileVideoClick={ProfileVideoClick}
+                  onSeminarVideoClick={SeminarVideoClick}
+                />
               </TabsContent>
             </Tabs>
           </div>
